@@ -5,12 +5,16 @@ Kitabu is a beautiful, responsive notes taking app with local-first storage.
 ## Features
 
 - Create, edit, pin, and delete notes
+- Archive and restore notes
 - Search across title, content, and tags
 - Markdown-like preview mode (`#`, `##`, `###`, lists, bold, italic, inline code)
 - Autosaves to browser `localStorage`
+- Theme switcher (`Sunrise` / `Midnight`) with persistence
+- Export notes to JSON and import backups
 - Keyboard shortcuts:
   - `Ctrl/Cmd + N`: new note
   - `Ctrl/Cmd + D`: delete active note
+  - `Ctrl/Cmd + Shift + A`: archive/restore active note
 
 ## Run
 
