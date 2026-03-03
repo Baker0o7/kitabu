@@ -21,6 +21,9 @@
         <h1 class="brand">Kitabu</h1>
       </div>
       <div class="topbar-actions">
+        <button id="theme-btn" class="btn btn-ghost" type="button">Night</button>
+        <button id="import-btn" class="btn btn-ghost" type="button">Import</button>
+        <button id="export-btn" class="btn btn-ghost" type="button">Export</button>
         <button id="new-note-btn" class="btn btn-solid" type="button">New note</button>
         <button id="delete-note-btn" class="btn btn-ghost" type="button">Delete</button>
       </div>
@@ -43,6 +46,11 @@
           />
         </div>
 
+        <div class="library-filters">
+          <button id="view-active-btn" class="chip active" type="button">Active</button>
+          <button id="view-archived-btn" class="chip" type="button">Archived</button>
+        </div>
+
         <div id="note-list" class="note-list" aria-live="polite"></div>
       </section>
 
@@ -63,6 +71,7 @@
             />
 
             <div class="editor-actions">
+              <button id="archive-btn" class="btn btn-ghost" type="button">Archive</button>
               <button id="pin-btn" class="btn btn-ghost" type="button">Pin</button>
               <button id="preview-toggle" class="btn btn-ghost" type="button">Preview</button>
             </div>
@@ -94,6 +103,7 @@
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="import-file-input" type="file" accept="application/json,.json" hidden />
 
     <script src="app.js"></script>
   </body>
