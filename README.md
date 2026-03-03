@@ -39,3 +39,10 @@ npm run apk:debug
 GitHub Actions workflow:
 
 - `.github/workflows/android-apk.yml` builds `app-debug.apk` on pushes to `main` and on manual dispatch.
+- `.github/workflows/android-release.yml` builds APK and publishes a GitHub Release with `app-debug.apk` attached.
+
+### Publish Release APK
+
+1. GitHub Actions -> `Build And Release APK` -> `Run workflow`.
+2. Set a tag like `v1.0.0`.
+3. The workflow creates a Release and uploads the APK asset automatically.
