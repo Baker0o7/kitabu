@@ -1,10 +1,17 @@
 const STORAGE_KEY = "kitabu.notes.v1";
+const THEME_KEY = "kitabu.theme.v1";
 
 const elements = {
   newNoteBtn: document.getElementById("new-note-btn"),
   deleteNoteBtn: document.getElementById("delete-note-btn"),
+  themeBtn: document.getElementById("theme-btn"),
+  importBtn: document.getElementById("import-btn"),
+  exportBtn: document.getElementById("export-btn"),
+  importFileInput: document.getElementById("import-file-input"),
   noteCount: document.getElementById("note-count"),
   searchInput: document.getElementById("search-input"),
+  viewActiveBtn: document.getElementById("view-active-btn"),
+  viewArchivedBtn: document.getElementById("view-archived-btn"),
   noteList: document.getElementById("note-list"),
   emptyState: document.getElementById("empty-state"),
   editor: document.getElementById("editor"),
@@ -13,6 +20,7 @@ const elements = {
   bodyInput: document.getElementById("body-input"),
   previewPane: document.getElementById("preview-pane"),
   previewToggle: document.getElementById("preview-toggle"),
+  archiveBtn: document.getElementById("archive-btn"),
   pinBtn: document.getElementById("pin-btn"),
   metaText: document.getElementById("meta-text"),
   statsText: document.getElementById("stats-text"),
@@ -24,6 +32,8 @@ const state = {
   activeId: null,
   query: "",
   previewMode: false,
+  view: "active",
+  theme: "sunrise",
 };
 
 let toastTimer = null;
@@ -40,6 +50,7 @@ function createBlankNote() {
     body: "",
     tags: [],
     pinned: false,
+    archived: false,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -56,6 +67,7 @@ function defaultNotes() {
     "- Click New note to create entries",
     "- Use commas in tags field",
     "- Toggle Preview for lightweight markdown",
+    "- Export JSON backups any time",
   ].join("\n");
   note.tags = ["welcome", "guide"];
   note.updatedAt = nowIso();
@@ -64,46 +76,87 @@ function defaultNotes() {
 
 function safeParse(value) {
   try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed;
+    return JSON.parse(value);
   } catch {
     return null;
   }
+}
+
+function normalizeIso(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  return Number.isNaN(Date.parse(value)) ? fallback : value;
+}
+
+function normalizeNote(note) {
+  if (!note || typeof note !== "object") {
+    return null;
+  }
+
+  const timestamp = nowIso();
+  const createdAt = normalizeIso(note.createdAt, timestamp);
+  const updatedAt = normalizeIso(note.updatedAt, createdAt);
+
+  const tags = Array.isArray(note.tags)
+    ? [...new Set(note.tags.filter((tag) => typeof tag === "string").map((tag) => tag.trim().toLowerCase()).filter(Boolean))]
+    : [];
+
+  return {
+    id: typeof note.id === "string" && note.id.trim() ? note.id : crypto.randomUUID(),
+    title: typeof note.title === "string" ? note.title : "",
+    body: typeof note.body === "string" ? note.body : "",
+    tags,
+    pinned: Boolean(note.pinned),
+    archived: Boolean(note.archived),
+    createdAt,
+    updatedAt,
+  };
 }
 
 function loadNotes() {
   const raw = localStorage.getItem(STORAGE_KEY);
   const parsed = raw ? safeParse(raw) : null;
 
-  if (!parsed || parsed.length === 0) {
+  const incoming = Array.isArray(parsed)
+    ? parsed
+    : parsed && Array.isArray(parsed.notes)
+      ? parsed.notes
+      : [];
+
+  const normalized = incoming.map(normalizeNote).filter(Boolean);
+
+  if (normalized.length === 0) {
     state.notes = defaultNotes();
     state.activeId = state.notes[0].id;
     saveNotes();
     return;
   }
 
-  state.notes = parsed
-    .filter((note) => note && typeof note.id === "string")
-    .map((note) => ({
-      id: note.id,
-      title: typeof note.title === "string" ? note.title : "",
-      body: typeof note.body === "string" ? note.body : "",
-      tags: Array.isArray(note.tags)
-        ? note.tags.filter((tag) => typeof tag === "string")
-        : [],
-      pinned: Boolean(note.pinned),
-      createdAt: typeof note.createdAt === "string" ? note.createdAt : nowIso(),
-      updatedAt: typeof note.updatedAt === "string" ? note.updatedAt : nowIso(),
-    }));
-
-  state.activeId = state.notes[0] ? state.notes[0].id : null;
+  state.notes = normalized;
+  const firstActive = sortNotes(state.notes).find((note) => !note.archived);
+  state.activeId = firstActive ? firstActive.id : sortNotes(state.notes)[0].id;
 }
 
 function saveNotes() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.notes));
+}
+
+function loadTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  state.theme = stored === "midnight" ? "midnight" : "sunrise";
+  applyTheme();
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.theme);
+  elements.themeBtn.textContent = state.theme === "midnight" ? "Sun" : "Night";
+}
+
+function toggleTheme() {
+  state.theme = state.theme === "midnight" ? "sunrise" : "midnight";
+  localStorage.setItem(THEME_KEY, state.theme);
+  applyTheme();
 }
 
 function getActiveNote() {
@@ -235,28 +288,67 @@ function wordCount(text) {
   return clean.split(/\s+/).length;
 }
 
-function renderNoteList() {
-  const sorted = sortNotes(state.notes);
-  const filtered = filterNotes(sorted, state.query);
+function noteMatchesView(note, view = state.view) {
+  if (view === "archived") {
+    return note.archived;
+  }
+  return !note.archived;
+}
 
-  elements.noteCount.textContent = `${state.notes.length} ${state.notes.length === 1 ? "note" : "notes"}`;
+function ensureActiveInView(preferredId = null) {
+  if (preferredId) {
+    const preferred = state.notes.find((note) => note.id === preferredId);
+    if (preferred && noteMatchesView(preferred)) {
+      state.activeId = preferredId;
+      return;
+    }
+  }
+
+  const active = getActiveNote();
+  if (active && noteMatchesView(active)) {
+    return;
+  }
+
+  const first = sortNotes(state.notes).find((note) => noteMatchesView(note));
+  state.activeId = first ? first.id : null;
+}
+
+function renderViewControls() {
+  elements.viewActiveBtn.classList.toggle("active", state.view === "active");
+  elements.viewArchivedBtn.classList.toggle("active", state.view === "archived");
+}
+
+function renderNoteList() {
+  const activeCount = state.notes.filter((note) => !note.archived).length;
+  const archivedCount = state.notes.length - activeCount;
+  elements.noteCount.textContent = `Active ${activeCount} · Archived ${archivedCount}`;
+
+  const inView = sortNotes(state.notes).filter((note) => noteMatchesView(note));
+  const filtered = filterNotes(inView, state.query);
 
   if (filtered.length === 0) {
-    elements.noteList.innerHTML = '<p class="muted">No notes match your search.</p>';
+    const message = state.query.trim()
+      ? "No notes match your search."
+      : state.view === "archived"
+        ? "No archived notes yet."
+        : "No active notes yet.";
+    elements.noteList.innerHTML = `<p class="muted">${message}</p>`;
     return;
   }
 
   elements.noteList.innerHTML = filtered
     .map((note, index) => {
       const tags = note.tags.length ? `#${note.tags.join(" #")}` : "";
-      const pinLabel = note.pinned ? "Pinned" : "";
+      const labels = [note.pinned ? "Pinned" : "", note.archived ? "Archived" : ""]
+        .filter(Boolean)
+        .join(" • ");
       return `
         <article class="note-card ${note.id === state.activeId ? "active" : ""}" data-note-id="${note.id}" style="--i:${index}">
           <h3 class="note-title">${escapeHtml(noteTitle(note))}</h3>
           <p class="note-snippet">${escapeHtml(noteSnippet(note))}</p>
           <div class="note-row">
             <span>${formatRelativeDate(note.updatedAt)}</span>
-            <span>${pinLabel}</span>
+            <span>${labels}</span>
           </div>
           <div class="note-tags">${escapeHtml(tags)}</div>
         </article>
@@ -280,7 +372,16 @@ function renderEditor() {
   elements.titleInput.value = note.title;
   elements.tagsInput.value = note.tags.join(", ");
   elements.bodyInput.value = note.body;
+
+  const readOnly = note.archived;
+  elements.titleInput.readOnly = readOnly;
+  elements.tagsInput.readOnly = readOnly;
+  elements.bodyInput.readOnly = readOnly;
+
   renderEditorMeta(note);
+
+  elements.archiveBtn.textContent = note.archived ? "Restore" : "Archive";
+  elements.archiveBtn.classList.toggle("active", note.archived);
 
   elements.pinBtn.textContent = note.pinned ? "Unpin" : "Pin";
   elements.pinBtn.classList.toggle("active", note.pinned);
@@ -299,14 +400,17 @@ function renderEditor() {
 }
 
 function renderEditorMeta(note) {
-  elements.metaText.textContent = `Updated ${formatRelativeDate(note.updatedAt)}`;
-  elements.statsText.textContent = `${wordCount(note.body)} words`;
+  const updatedText = `Updated ${formatRelativeDate(note.updatedAt)}`;
+  elements.metaText.textContent = note.archived ? `Archived · ${updatedText}` : updatedText;
+  elements.statsText.textContent = `${wordCount(note.body)} words · ${note.body.length} chars`;
   if (state.previewMode) {
     elements.previewPane.innerHTML = markdownToHtml(note.body);
   }
 }
 
 function renderAll() {
+  ensureActiveInView();
+  renderViewControls();
   renderNoteList();
   renderEditor();
 }
@@ -325,9 +429,18 @@ function setActive(id) {
   renderAll();
 }
 
+function setView(view) {
+  if (state.view === view) {
+    return;
+  }
+  state.view = view;
+  renderAll();
+}
+
 function createNote() {
   const note = createBlankNote();
   state.notes.push(note);
+  state.view = "active";
   state.activeId = note.id;
   saveNotes();
   renderAll();
@@ -349,11 +462,10 @@ function deleteActiveNote() {
   state.notes = state.notes.filter((note) => note.id !== active.id);
 
   if (state.notes.length === 0) {
-    const starter = createBlankNote();
-    state.notes = [starter];
+    state.notes = [createBlankNote()];
+    state.view = "active";
   }
 
-  state.activeId = sortNotes(state.notes)[0].id;
   saveNotes();
   renderAll();
   showToast("Note deleted");
@@ -375,9 +487,104 @@ function updateActive(fields, { fullRender = false } = {}) {
   renderEditorMeta(note);
 }
 
+function toggleArchiveActive() {
+  const note = getActiveNote();
+  if (!note) {
+    return;
+  }
+
+  const archived = !note.archived;
+  updateActive({ archived }, { fullRender: true });
+  showToast(archived ? "Note archived" : "Note restored");
+}
+
+function exportNotes() {
+  const payload = {
+    version: 2,
+    exportedAt: nowIso(),
+    notes: state.notes,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+  anchor.href = url;
+  anchor.download = `kitabu-notes-${stamp}.json`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  showToast("Notes exported");
+}
+
+function importNotesFromFile(file) {
+  if (!file) {
+    return;
+  }
+
+  file
+    .text()
+    .then((text) => {
+      const parsed = safeParse(text);
+      const incoming = Array.isArray(parsed)
+        ? parsed
+        : parsed && Array.isArray(parsed.notes)
+          ? parsed.notes
+          : null;
+
+      if (!incoming) {
+        showToast("Invalid import file");
+        return;
+      }
+
+      const normalized = incoming.map(normalizeNote).filter(Boolean);
+      if (normalized.length === 0) {
+        showToast("No notes found in import");
+        return;
+      }
+
+      const byId = new Map(state.notes.map((note) => [note.id, note]));
+      for (const note of normalized) {
+        byId.set(note.id, note);
+      }
+
+      state.notes = Array.from(byId.values());
+      state.view = "active";
+      const firstImported = normalized.find((note) => !note.archived) || normalized[0];
+      state.activeId = firstImported.id;
+
+      saveNotes();
+      renderAll();
+      showToast(`Imported ${normalized.length} notes`);
+    })
+    .catch(() => {
+      showToast("Import failed");
+    });
+}
+
 function bindEvents() {
   elements.newNoteBtn.addEventListener("click", createNote);
   elements.deleteNoteBtn.addEventListener("click", deleteActiveNote);
+
+  elements.themeBtn.addEventListener("click", () => {
+    toggleTheme();
+  });
+
+  elements.exportBtn.addEventListener("click", exportNotes);
+
+  elements.importBtn.addEventListener("click", () => {
+    elements.importFileInput.click();
+  });
+
+  elements.importFileInput.addEventListener("change", (event) => {
+    const [file] = event.target.files || [];
+    importNotesFromFile(file);
+    event.target.value = "";
+  });
+
+  elements.viewActiveBtn.addEventListener("click", () => setView("active"));
+  elements.viewArchivedBtn.addEventListener("click", () => setView("archived"));
 
   elements.searchInput.addEventListener("input", (event) => {
     state.query = event.target.value;
@@ -414,6 +621,8 @@ function bindEvents() {
     renderEditor();
   });
 
+  elements.archiveBtn.addEventListener("click", toggleArchiveActive);
+
   elements.pinBtn.addEventListener("click", () => {
     const note = getActiveNote();
     if (!note) {
@@ -432,11 +641,17 @@ function bindEvents() {
     if (meta && event.key.toLowerCase() === "d") {
       event.preventDefault();
       deleteActiveNote();
+      return;
+    }
+    if (meta && event.shiftKey && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      toggleArchiveActive();
     }
   });
 }
 
 function init() {
+  loadTheme();
   loadNotes();
   bindEvents();
   renderAll();
