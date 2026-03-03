@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (example: v1.0.0)
+        description: "Release tag (example: v1.0.0)"
         required: true
         default: v1.0.0
       name:
-        description: Release title (optional)
+        description: "Release title (optional)"
         required: false
       prerelease:
-        description: Mark as prerelease
+        description: "Mark as prerelease"
         required: false
         type: boolean
         default: false
