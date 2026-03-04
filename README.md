@@ -5,10 +5,14 @@ Kitabu is a Flutter notes app with local persistence and Android APK release aut
 ## Features
 
 - Create, edit, pin, archive, restore, and delete notes
+- Duplicate and share individual notes
 - Search by title, tags, and body
+- Sort by updated time, created time, or title
+- Favorites filter and pin filter
 - Markdown preview mode
 - Theme toggle (light/dark)
 - JSON import and export
+- Workspace stats (counts, words, reading time)
 - Local persistence with `SharedPreferences`
 
 ## Run (local)

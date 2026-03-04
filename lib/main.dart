@@ -175,11 +175,16 @@ class KitabuHome extends StatefulWidget {
 }
 
 enum NoteListFilter { all, pinned, favorites }
+enum NoteSort { recentlyUpdated, recentlyCreated, titleAsc }
+enum AppMenuAction { duplicate, share, stats, clearSearch }
 
 class _KitabuHomeState extends State<KitabuHome> {
   static const _notesKey = 'kitabu.notes.v1';
   static const _themeKey = 'kitabu.theme.v1';
   static const _viewKey = 'kitabu.view.v1';
+  static const _filterKey = 'kitabu.filter.v1';
+  static const _sortKey = 'kitabu.sort.v1';
+  static const _previewKey = 'kitabu.preview.v1';
   static const _maxImportBytes = 5 * 1024 * 1024;
 
   final _uuid = const Uuid();
@@ -195,8 +200,10 @@ class _KitabuHomeState extends State<KitabuHome> {
   bool _previewMode = false;
   bool _showArchived = false;
   NoteListFilter _listFilter = NoteListFilter.all;
+  NoteSort _sortBy = NoteSort.recentlyUpdated;
   bool _hydratingEditors = false;
   bool _loading = true;
+  DateTime? _lastSavedAt;
 
   Timer? _saveDebounce;
   SharedPreferences? _prefs;
@@ -230,6 +237,9 @@ class _KitabuHomeState extends State<KitabuHome> {
     widget.onThemeLoaded(theme == 'midnight');
 
     _showArchived = _prefs?.getString(_viewKey) == 'archived';
+    _listFilter = _parseFilter(_prefs?.getString(_filterKey));
+    _sortBy = _parseSort(_prefs?.getString(_sortKey));
+    _previewMode = _prefs?.getBool(_previewKey) ?? false;
 
     final raw = _prefs?.getString(_notesKey);
     final parsed = _decodeJsonSafely(raw);
@@ -292,7 +302,14 @@ class _KitabuHomeState extends State<KitabuHome> {
       if (a.pinned != b.pinned) {
         return a.pinned ? -1 : 1;
       }
-      return b.updatedAt.compareTo(a.updatedAt);
+      switch (_sortBy) {
+        case NoteSort.recentlyUpdated:
+          return b.updatedAt.compareTo(a.updatedAt);
+        case NoteSort.recentlyCreated:
+          return b.createdAt.compareTo(a.createdAt);
+        case NoteSort.titleAsc:
+          return _noteTitle(a).toLowerCase().compareTo(_noteTitle(b).toLowerCase());
+      }
     });
     return list;
   }
@@ -372,7 +389,6 @@ class _KitabuHomeState extends State<KitabuHome> {
   void _selectNote(String id) {
     setState(() {
       _activeId = id;
-      _previewMode = false;
     });
     _hydrateEditors();
   }
@@ -393,12 +409,12 @@ class _KitabuHomeState extends State<KitabuHome> {
 
     setState(() {
       _showArchived = false;
+      _listFilter = NoteListFilter.all;
       _activeId = note.id;
       _notes.add(note);
-      _previewMode = false;
     });
 
-    _saveView();
+    _savePreferences();
     _scheduleSave();
     _hydrateEditors();
     _titleFocus.requestFocus();
@@ -428,10 +444,9 @@ class _KitabuHomeState extends State<KitabuHome> {
                 if (_notes.isEmpty) {
                   _notes.add(_welcomeNote());
                   _showArchived = false;
-                  _saveView();
+                  _savePreferences();
                 }
                 _activeId = _visibleAfterDelete()?.id;
-                _previewMode = false;
               });
               _scheduleSave();
               _hydrateEditors();
@@ -527,9 +542,8 @@ class _KitabuHomeState extends State<KitabuHome> {
     setState(() {
       _showArchived = archived;
       _activeId = _visibleNotes.isNotEmpty ? _visibleNotes.first.id : null;
-      _previewMode = false;
     });
-    _saveView();
+    _savePreferences();
     _hydrateEditors();
   }
 
@@ -537,13 +551,16 @@ class _KitabuHomeState extends State<KitabuHome> {
     setState(() {
       _listFilter = filter;
       _activeId = _visibleNotes.isNotEmpty ? _visibleNotes.first.id : null;
-      _previewMode = false;
     });
+    _savePreferences();
     _hydrateEditors();
   }
 
-  void _saveView() {
+  void _savePreferences() {
     _prefs?.setString(_viewKey, _showArchived ? 'archived' : 'active');
+    _prefs?.setString(_filterKey, _listFilter.name);
+    _prefs?.setString(_sortKey, _sortBy.name);
+    _prefs?.setBool(_previewKey, _previewMode);
   }
 
   dynamic _decodeJsonSafely(String? raw) {
@@ -564,6 +581,8 @@ class _KitabuHomeState extends State<KitabuHome> {
     if (_prefs == null) return;
     final payload = jsonEncode(_notes.map((e) => e.toJson()).toList());
     _prefs!.setString(_notesKey, payload);
+    _lastSavedAt = DateTime.now();
+    if (mounted) setState(() {});
   }
 
   Future<void> _exportNotes() async {
@@ -657,7 +676,7 @@ class _KitabuHomeState extends State<KitabuHome> {
         _activeId = _visibleNotes.isNotEmpty ? _visibleNotes.first.id : null;
       });
 
-      _saveView();
+      _savePreferences();
       _scheduleSave();
       _hydrateEditors();
 
@@ -667,11 +686,133 @@ class _KitabuHomeState extends State<KitabuHome> {
     }
   }
 
+  void _duplicateActive() {
+    final note = _activeNote;
+    if (note == null) return;
+
+    final now = DateTime.now();
+    final duplicate = Note(
+      id: _uuid.v4(),
+      title: '${_noteTitle(note)} (copy)',
+      body: note.body,
+      tags: [...note.tags],
+      pinned: false,
+      favorite: note.favorite,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    setState(() {
+      _showArchived = false;
+      _listFilter = NoteListFilter.all;
+      _notes.add(duplicate);
+      _activeId = duplicate.id;
+    });
+
+    _savePreferences();
+    _scheduleSave();
+    _hydrateEditors();
+    _toast('Note duplicated');
+  }
+
+  Future<void> _shareActive() async {
+    final note = _activeNote;
+    if (note == null) return;
+    try {
+      final title = _noteTitle(note);
+      final body = note.body.trim().isEmpty ? '(empty note)' : note.body;
+      final payload = '# $title\n\n$body';
+      await Share.share(payload, subject: title);
+    } catch (_) {
+      _toast('Unable to share note');
+    }
+  }
+
+  Future<void> _showStatsDialog() async {
+    final total = _notes.length;
+    final active = _activeCount;
+    final archived = _archivedCount;
+    final pinned = _notes.where((n) => n.pinned).length;
+    final favorites = _notes.where((n) => n.favorite).length;
+    final words = _notes.fold<int>(0, (sum, n) => sum + _wordCount(n.body));
+    final readMinutes = (words / 200).ceil();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Workspace stats'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total notes: $total'),
+            Text('Active notes: $active'),
+            Text('Archived notes: $archived'),
+            Text('Pinned notes: $pinned'),
+            Text('Favorite notes: $favorites'),
+            Text('Total words: $words'),
+            Text('Estimated read time: ${readMinutes < 1 ? 1 : readMinutes} min'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleMenuAction(AppMenuAction action) async {
+    switch (action) {
+      case AppMenuAction.duplicate:
+        _duplicateActive();
+        break;
+      case AppMenuAction.share:
+        await _shareActive();
+        break;
+      case AppMenuAction.stats:
+        await _showStatsDialog();
+        break;
+      case AppMenuAction.clearSearch:
+        _searchController.clear();
+        setState(() {});
+        break;
+    }
+  }
+
   void _toast(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _formatSortLabel(NoteSort value) {
+    switch (value) {
+      case NoteSort.recentlyUpdated:
+        return 'Updated';
+      case NoteSort.recentlyCreated:
+        return 'Created';
+      case NoteSort.titleAsc:
+        return 'Title';
+    }
+  }
+
+  NoteListFilter _parseFilter(String? raw) {
+    for (final value in NoteListFilter.values) {
+      if (value.name == raw) return value;
+    }
+    return NoteListFilter.all;
+  }
+
+  NoteSort _parseSort(String? raw) {
+    for (final value in NoteSort.values) {
+      if (value.name == raw) return value;
+    }
+    return NoteSort.recentlyUpdated;
   }
 
   Widget _buildLibraryPanel() {
@@ -708,6 +849,31 @@ class _KitabuHomeState extends State<KitabuHome> {
               ],
               selected: {_showArchived},
               onSelectionChanged: (value) => _toggleView(value.first),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<NoteSort>(
+              value: _sortBy,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                labelText: 'Sort by',
+              ),
+              items: NoteSort.values
+                  .map(
+                    (value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(_formatSortLabel(value)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _sortBy = value;
+                  _activeId = _visibleNotes.isNotEmpty ? _visibleNotes.first.id : _activeId;
+                });
+                _savePreferences();
+              },
             ),
             const SizedBox(height: 10),
             SegmentedButton<NoteListFilter>(
@@ -817,7 +983,10 @@ class _KitabuHomeState extends State<KitabuHome> {
                       child: Text(note.archived ? 'Restore' : 'Archive'),
                     ),
                     OutlinedButton(
-                      onPressed: () => setState(() => _previewMode = !_previewMode),
+                      onPressed: () {
+                        setState(() => _previewMode = !_previewMode);
+                        _savePreferences();
+                      },
                       child: Text(_previewMode ? 'Edit' : 'Preview'),
                     ),
                   ],
@@ -864,7 +1033,10 @@ class _KitabuHomeState extends State<KitabuHome> {
               children: [
                 Text(note.archived ? 'Archived · Updated ${_formatRelative(note.updatedAt)}' : 'Updated ${_formatRelative(note.updatedAt)}'),
                 const Spacer(),
-                Text('${_wordCount(_bodyController.text)} words · ${_bodyController.text.length} chars'),
+                Text(
+                  '${_wordCount(_bodyController.text)} words · ${_bodyController.text.length} chars'
+                  '${_lastSavedAt == null ? '' : ' · Saved ${_formatRelative(_lastSavedAt!)}'}',
+                ),
               ],
             ),
           ],
@@ -920,6 +1092,28 @@ class _KitabuHomeState extends State<KitabuHome> {
             tooltip: 'Delete active note',
             onPressed: note == null ? null : _deleteActive,
             icon: const Icon(Icons.delete_outline),
+          ),
+          PopupMenuButton<AppMenuAction>(
+            tooltip: 'More actions',
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: AppMenuAction.duplicate,
+                child: Text('Duplicate note'),
+              ),
+              const PopupMenuItem(
+                value: AppMenuAction.share,
+                child: Text('Share active note'),
+              ),
+              const PopupMenuItem(
+                value: AppMenuAction.clearSearch,
+                child: Text('Clear search'),
+              ),
+              const PopupMenuItem(
+                value: AppMenuAction.stats,
+                child: Text('Workspace stats'),
+              ),
+            ],
           ),
         ],
       ),
