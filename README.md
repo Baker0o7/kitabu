@@ -12,9 +12,15 @@ Kitabu is a beautiful, responsive notes taking app with local-first storage.
 - Theme switcher (`Sunrise` / `Midnight`) with persistence
 - Export notes to JSON and import backups
 - Keyboard shortcuts:
-  - `Ctrl/Cmd + N`: new note
-  - `Ctrl/Cmd + D`: delete active note
-  - `Ctrl/Cmd + Shift + A`: archive/restore active note
+  - `Primary + N`: new note (`Cmd` on Mac/iOS, `Ctrl` elsewhere)
+  - `Primary + D`: delete active note
+  - `Primary + Shift + A`: archive/restore active note
+
+Import behavior:
+
+- Import merges by note id.
+- If both local and imported note exist, the newer `updatedAt` version wins.
+- Very large import files are rejected for safety.
 
 ## Run
 
