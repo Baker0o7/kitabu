@@ -26,7 +26,11 @@ With Kitabu, you can:
 
 ## App Screenshots
 
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="220" alt="Kitabu screenshot 1" />
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="220" alt="Kitabu screenshot 2" />
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="220" alt="Kitabu screenshot 3" />
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="220" alt="Kitabu screenshot 4" />
+<p>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="220" alt="Kitabu screenshot 1" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="220" alt="Kitabu screenshot 2" />
+</p>
+<p>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="220" alt="Kitabu screenshot 3" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="220" alt="Kitabu screenshot 4" />
+</p>
