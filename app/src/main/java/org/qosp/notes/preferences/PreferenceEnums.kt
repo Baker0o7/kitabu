@@ -34,6 +34,10 @@ enum class ColorScheme(
     TRUE_YELLOW(R.string.preferences_color_scheme_yellow, R.style.Yellow),
     GREEN(R.string.preferences_color_scheme_green, R.style.Green),
     PINK(R.string.preferences_color_scheme_pink, R.style.Pink),
+    TEAL(R.string.preferences_color_scheme_teal, R.style.Teal),
+    CYAN(R.string.preferences_color_scheme_cyan, R.style.Cyan),
+    BROWN(R.string.preferences_color_scheme_brown, R.style.Brown),
+    GRAY(R.string.preferences_color_scheme_gray, R.style.Gray),
     // These two lines here are labeled incorrectly (should be labelled as ORANGE, PURPLE respectively)
     YELLOW(R.string.preferences_color_scheme_orange, R.style.Orange),
     RED(R.string.preferences_color_scheme_purple, R.style.Purple),

@@ -129,4 +129,44 @@
         <item name="colorPrimaryTranscluent">#26B39DDB</item>
 
     </style>
+
+    <style name="Teal">
+        <item name="colorPrimary">#80CBC4</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="colorSecondary">#80CBC4</item>
+
+        <item name="colorDrawerHeaderBackground">#3380CBC4</item>
+        <item name="colorPrimaryTranscluent">#2680CBC4</item>
+
+    </style>
+
+    <style name="Cyan">
+        <item name="colorPrimary">#80DEEA</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="colorSecondary">#80DEEA</item>
+
+        <item name="colorDrawerHeaderBackground">#3380DEEA</item>
+        <item name="colorPrimaryTranscluent">#2680DEEA</item>
+
+    </style>
+
+    <style name="Brown">
+        <item name="colorPrimary">#BCAAA4</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="colorSecondary">#BCAAA4</item>
+
+        <item name="colorDrawerHeaderBackground">#33BCAAA4</item>
+        <item name="colorPrimaryTranscluent">#26BCAAA4</item>
+
+    </style>
+
+    <style name="Gray">
+        <item name="colorPrimary">#B0BEC5</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="colorSecondary">#B0BEC5</item>
+
+        <item name="colorDrawerHeaderBackground">#33B0BEC5</item>
+        <item name="colorPrimaryTranscluent">#26B0BEC5</item>
+
+    </style>
 </resources>
