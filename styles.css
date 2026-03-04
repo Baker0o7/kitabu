@@ -417,6 +417,13 @@ body {
   transform: translateY(0);
 }
 
+.btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-solid {
   color: #fff;
   background: linear-gradient(120deg, var(--accent), var(--accent-deep));
