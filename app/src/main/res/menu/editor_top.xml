@@ -66,6 +66,11 @@
         android:visible="false"
         app:showAsAction="never"/>
     <item
+        android:id="@+id/action_encrypt_note"
+        android:title="@string/action_encrypt_note"
+        android:visible="false"
+        app:showAsAction="never"/>
+    <item
         android:id="@+id/action_screen_always_on"
             android:title="@string/action_screen_always_on"
             android:checkable="true"

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.msoul.datastore.defaultOf
+import org.qosp.notes.components.security.NoteEncryptionManager
 import org.qosp.notes.data.model.Attachment
 import org.qosp.notes.data.model.Note
 import org.qosp.notes.data.model.NoteColor
@@ -37,6 +38,7 @@ class EditorViewModel(
     private val noteRepository: NoteRepository,
     private val notebookRepository: NotebookRepository,
     private val preferenceRepository: PreferenceRepository,
+    private val noteEncryptionManager: NoteEncryptionManager,
 ) : ViewModel() {
 
     var inEditMode: Boolean = false
@@ -52,8 +54,9 @@ class EditorViewModel(
         .flatMapLatest { note ->
             getNotebookData(note.notebookId).flatMapLatest { notebook ->
                 preferenceRepository.getAll().map { prefs ->
+                    val decrypted = noteEncryptionManager.decryptIfNeeded(note)
                     Data(
-                        note = note,
+                        note = decrypted.note,
                         notebook = notebook,
                         dateTimeFormats = prefs.dateFormat to prefs.timeFormat,
                         openMediaInternally = prefs.openMediaIn == OpenMediaIn.INTERNAL,
@@ -61,6 +64,8 @@ class EditorViewModel(
                         editorFontSize = prefs.editorFontSize.fontSize,
                         showFabChangeMode = prefs.showFabChangeMode == ShowFabChangeMode.FAB,
                         defaultEditorMode = prefs.defaultEditorMode,
+                        isEncrypted = decrypted.isEncrypted,
+                        hasEncryptionError = decrypted.hasError,
                         isInitialized = true,
                     )
                 }
@@ -169,11 +174,26 @@ class EditorViewModel(
         )
     }
 
+    fun toggleEncryption() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val note = data.value.note ?: return@launch
+            val encrypted = data.value.isEncrypted
+            val updated = note.copy(modifiedDate = Instant.now().epochSecond)
+
+            if (encrypted) {
+                noteRepository.updateNotes(updated)
+            } else {
+                noteRepository.updateNotes(noteEncryptionManager.encryptNote(updated))
+            }
+        }
+    }
+
     private inline fun update(crossinline transform: suspend (Note) -> Note) {
         viewModelScope.launch(Dispatchers.IO) {
             val note = data.value.note ?: return@launch
             val new = transform(note)
-            noteRepository.updateNotes(new)
+            val storable = if (data.value.isEncrypted) noteEncryptionManager.encryptNote(new) else new
+            noteRepository.updateNotes(storable)
         }
     }
 
@@ -186,6 +206,8 @@ class EditorViewModel(
         val editorFontSize: Int = -1, // -1: not customised, default font size
         val showFabChangeMode: Boolean = true,
         val defaultEditorMode: DefaultEditorMode = defaultOf(),
+        val isEncrypted: Boolean = false,
+        val hasEncryptionError: Boolean = false,
         val isInitialized: Boolean = false,
         val moveCheckedItems: Boolean = true,
     )

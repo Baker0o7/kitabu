@@ -136,6 +136,7 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
     private var nextTaskId: Long = 0L
     private var isList: Boolean = false
     private var isFirstLoad: Boolean = true
+    private var hasShownEncryptionError: Boolean = false
     private var formatter: DateTimeFormatter? = null
 
     private lateinit var attachmentsAdapter: AttachmentsAdapter
@@ -348,7 +349,7 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
         this.mainMenu = menu
 
         lifecycleScope.launch {
-            model.data.first().note?.let { setupMenuItems(it, it.reminders.isNotEmpty()) }
+            model.data.first().note?.let { setupMenuItems(it, it.reminders.isNotEmpty(), model.data.value.isEncrypted) }
         }
     }
 
@@ -402,11 +403,20 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
                 R.id.action_change_mode -> {
                     updateEditMode(!model.inEditMode)
                     if (model.inEditMode) requestFocusForFields(true) else view?.hideKeyboard()
-                    setupMenuItems(note, note.reminders.isNotEmpty())
+                    setupMenuItems(note, note.reminders.isNotEmpty(), data.isEncrypted)
                 }
 
                 R.id.action_hide_note -> {
                     if (note.isHidden) activityModel.showNotes(note) else activityModel.hideNotes(note)
+                }
+
+                R.id.action_encrypt_note -> {
+                    model.toggleEncryption()
+                    sendMessage(
+                        getString(
+                            if (data.isEncrypted) R.string.indicator_note_decrypted else R.string.indicator_note_encrypted
+                        )
+                    )
                 }
 
                 R.id.action_do_not_sync -> {
@@ -695,7 +705,7 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
         }
     }
 
-    private fun setupMenuItems(note: Note, hasReminders: Boolean) = mainMenu?.run {
+    private fun setupMenuItems(note: Note, hasReminders: Boolean, isEncrypted: Boolean) = mainMenu?.run {
         findItem(R.id.action_restore_note)?.isVisible = note.isDeleted
         findItem(R.id.action_delete_permanently_note)?.isVisible = note.isDeleted
         findItem(R.id.action_delete_note)?.isVisible = !note.isDeleted
@@ -746,6 +756,11 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
             isVisible = !note.isDeleted
         }
 
+        findItem(R.id.action_encrypt_note)?.apply {
+            title = if (isEncrypted) getString(R.string.action_decrypt_note) else getString(R.string.action_encrypt_note)
+            isVisible = !note.isDeleted
+        }
+
         findItem(R.id.action_do_not_sync)?.apply {
             isChecked = note.isLocalOnly
             isVisible = !note.isDeleted
@@ -774,6 +789,10 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
             if (!data.isInitialized || data.note == null) return@collect
 
             this@EditorFragment.data = data
+            if (data.hasEncryptionError && !hasShownEncryptionError) {
+                hasShownEncryptionError = true
+                sendMessage(getString(R.string.indicator_note_encryption_error))
+            }
 
             val isConverted = data.note.isList != isList
             val isMarkdownEnabled = data.note.isMarkdownEnabled
@@ -871,7 +890,7 @@ class EditorFragment : BaseFragment(R.layout.fragment_editor) {
                 textViewContentPreview.text = data.note.content
             }
 
-            setupMenuItems(data.note, data.note.reminders.isNotEmpty())
+            setupMenuItems(data.note, data.note.reminders.isNotEmpty(), data.isEncrypted)
 
             // Update notebook indicator
             notebookView.setCompoundDrawablesRelativeWithIntrinsicBounds(

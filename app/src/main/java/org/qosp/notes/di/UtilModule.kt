@@ -8,6 +8,7 @@ import org.qosp.notes.App
 import org.qosp.notes.BuildConfig
 import org.qosp.notes.components.MediaStorageManager
 import org.qosp.notes.components.backup.BackupManager
+import org.qosp.notes.components.security.NoteEncryptionManager
 import org.qosp.notes.components.workers.BinCleaningWorker
 import org.qosp.notes.components.workers.SyncWorker
 import org.qosp.notes.ui.reminders.ReminderManager
@@ -43,6 +44,7 @@ object UtilModule {
             )
         }
         singleOf(::ReminderManager)
+        singleOf(::NoteEncryptionManager)
         singleOf(::ConnectionManager)
         singleOf(::Toaster)
     }

@@ -182,6 +182,11 @@
     <string name="action_compact_preview">Compact preview</string>
     <string name="action_full_preview">Full preview</string>
     <string name="action_screen_always_on">Screen always on</string>
+    <string name="action_encrypt_note">Encrypt note</string>
+    <string name="action_decrypt_note">Decrypt note</string>
+    <string name="indicator_note_encrypted">Note encrypted</string>
+    <string name="indicator_note_decrypted">Note decrypted</string>
+    <string name="indicator_note_encryption_error">Could not decrypt this note</string>
 
 
     <!-- Attachments -->
