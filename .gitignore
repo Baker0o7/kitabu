@@ -1,5 +1,22 @@
-node_modules/
-dist/
-.tmp_pkg/
-*.log
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Platform tooling
+android/.gradle/
+android/local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
 .DS_Store
+
+# Temp
+*.log
+.tmp_pkg/
+build-artifacts/
