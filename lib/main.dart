@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,6 +15,18 @@ import 'package:uuid/uuid.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const KitabuApp());
+}
+
+class CreateNoteIntent extends Intent {
+  const CreateNoteIntent();
+}
+
+class SearchIntent extends Intent {
+  const SearchIntent();
+}
+
+class TogglePreviewIntent extends Intent {
+  const TogglePreviewIntent();
 }
 
 class KitabuApp extends StatefulWidget {
@@ -176,7 +189,21 @@ class KitabuHome extends StatefulWidget {
 
 enum NoteListFilter { all, pinned, favorites }
 enum NoteSort { recentlyUpdated, recentlyCreated, titleAsc }
-enum AppMenuAction { duplicate, share, stats, clearSearch }
+enum AppMenuAction { duplicate, share, stats, clearSearch, templates }
+
+class NoteTemplate {
+  const NoteTemplate({
+    required this.title,
+    required this.body,
+    required this.tags,
+    required this.icon,
+  });
+
+  final String title;
+  final String body;
+  final List<String> tags;
+  final IconData icon;
+}
 
 class _KitabuHomeState extends State<KitabuHome> {
   static const _notesKey = 'kitabu.notes.v1';
@@ -194,6 +221,38 @@ class _KitabuHomeState extends State<KitabuHome> {
   final _searchController = TextEditingController();
 
   final _titleFocus = FocusNode();
+  final _searchFocus = FocusNode();
+
+  static const List<NoteTemplate> _templates = [
+    NoteTemplate(
+      title: 'Daily Journal',
+      body:
+          '## Morning\n- Mood:\n- Top priority:\n\n## Day Notes\n- \n\n## Evening Reflection\n- Win of the day:\n- Improve tomorrow:',
+      tags: ['journal', 'daily'],
+      icon: Icons.auto_stories_outlined,
+    ),
+    NoteTemplate(
+      title: 'Meeting Notes',
+      body:
+          '## Agenda\n- \n\n## Discussion\n- \n\n## Decisions\n- \n\n## Action Items\n- [ ] ',
+      tags: ['meeting', 'work'],
+      icon: Icons.groups_outlined,
+    ),
+    NoteTemplate(
+      title: 'Task Sprint',
+      body:
+          '## Backlog\n- [ ] \n- [ ] \n\n## In Progress\n- [ ] \n\n## Done\n- [x] ',
+      tags: ['tasks', 'planning'],
+      icon: Icons.checklist_rtl_outlined,
+    ),
+    NoteTemplate(
+      title: 'Content Draft',
+      body:
+          '# Headline\n\n## Hook\n\n## Main Points\n1. \n2. \n3. \n\n## Call To Action',
+      tags: ['writing', 'draft'],
+      icon: Icons.edit_note_outlined,
+    ),
+  ];
 
   final List<Note> _notes = [];
   String? _activeId;
@@ -227,6 +286,7 @@ class _KitabuHomeState extends State<KitabuHome> {
     _bodyController.dispose();
     _searchController.dispose();
     _titleFocus.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -368,6 +428,25 @@ class _KitabuHomeState extends State<KitabuHome> {
     return text.length > 120 ? '${text.substring(0, 120)}…' : text;
   }
 
+  ({int checked, int total}) _checklistStats(String body) {
+    final regex = RegExp(r'-\s+\[( |x|X)\]');
+    final matches = regex.allMatches(body);
+    var checked = 0;
+    var total = 0;
+    for (final match in matches) {
+      total += 1;
+      final marker = match.group(1)?.toLowerCase();
+      if (marker == 'x') checked += 1;
+    }
+    return (checked: checked, total: total);
+  }
+
+  int _estimatedReadMinutes(String text) {
+    final words = _wordCount(text);
+    final minutes = (words / 200).ceil();
+    return minutes < 1 ? 1 : minutes;
+  }
+
   String _formatRelative(DateTime value) {
     final delta = DateTime.now().difference(value);
     if (delta.inMinutes < 1) return 'just now';
@@ -419,6 +498,70 @@ class _KitabuHomeState extends State<KitabuHome> {
     _hydrateEditors();
     _titleFocus.requestFocus();
     _toast('Note created');
+  }
+
+  void _createFromTemplate(NoteTemplate template) {
+    final now = DateTime.now();
+    final note = Note(
+      id: _uuid.v4(),
+      title: template.title,
+      body: template.body,
+      tags: template.tags,
+      pinned: false,
+      favorite: false,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    setState(() {
+      _showArchived = false;
+      _listFilter = NoteListFilter.all;
+      _activeId = note.id;
+      _notes.add(note);
+      _previewMode = false;
+    });
+
+    _savePreferences();
+    _scheduleSave();
+    _hydrateEditors();
+    _titleFocus.requestFocus();
+    _toast('Template added: ${template.title}');
+  }
+
+  Future<void> _showTemplatePicker() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: _templates.length,
+          itemBuilder: (context, index) {
+            final template = _templates[index];
+            return ListTile(
+              leading: Icon(template.icon),
+              title: Text(template.title),
+              subtitle: Text(template.tags.join(', ')),
+              onTap: () {
+                Navigator.of(context).pop();
+                _createFromTemplate(template);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _focusSearch() {
+    _searchFocus.requestFocus();
+  }
+
+  void _togglePreview() {
+    setState(() => _previewMode = !_previewMode);
+    _savePreferences();
   }
 
   void _deleteActive() {
@@ -736,7 +879,7 @@ class _KitabuHomeState extends State<KitabuHome> {
     final pinned = _notes.where((n) => n.pinned).length;
     final favorites = _notes.where((n) => n.favorite).length;
     final words = _notes.fold<int>(0, (sum, n) => sum + _wordCount(n.body));
-    final readMinutes = (words / 200).ceil();
+    final readMinutes = _estimatedReadMinutes(_notes.map((n) => n.body).join('\n'));
 
     await showDialog<void>(
       context: context,
@@ -752,7 +895,7 @@ class _KitabuHomeState extends State<KitabuHome> {
             Text('Pinned notes: $pinned'),
             Text('Favorite notes: $favorites'),
             Text('Total words: $words'),
-            Text('Estimated read time: ${readMinutes < 1 ? 1 : readMinutes} min'),
+            Text('Estimated read time: $readMinutes min'),
           ],
         ),
         actions: [
@@ -779,6 +922,9 @@ class _KitabuHomeState extends State<KitabuHome> {
       case AppMenuAction.clearSearch:
         _searchController.clear();
         setState(() {});
+        break;
+      case AppMenuAction.templates:
+        await _showTemplatePicker();
         break;
     }
   }
@@ -833,12 +979,23 @@ class _KitabuHomeState extends State<KitabuHome> {
             ),
             const SizedBox(height: 10),
             TextField(
+              focusNode: _searchFocus,
               controller: _searchController,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
                 hintText: 'Search title, tags, content',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 isDense: true,
+                suffixIcon: _searchController.text.trim().isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
               ),
             ),
             const SizedBox(height: 8),
@@ -902,12 +1059,27 @@ class _KitabuHomeState extends State<KitabuHome> {
                       itemBuilder: (context, index) {
                         final note = visible[index];
                         final selected = note.id == _activeId;
+                        final checklist = _checklistStats(note.body);
+                        final checklistLabel = checklist.total == 0
+                            ? null
+                            : 'Checklist ${checklist.checked}/${checklist.total}';
                         return Card(
                           color: selected ? Theme.of(context).colorScheme.secondaryContainer : null,
                           child: ListTile(
                             onTap: () => _selectNote(note.id),
                             title: Text(_noteTitle(note), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(_noteSnippet(note), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(_noteSnippet(note), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                if (checklistLabel != null)
+                                  Text(
+                                    checklistLabel,
+                                    style: Theme.of(context).textTheme.labelSmall,
+                                  ),
+                              ],
+                            ),
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
@@ -942,6 +1114,7 @@ class _KitabuHomeState extends State<KitabuHome> {
     }
 
     final readOnly = note.archived;
+    final checklistFooter = _checklistStats(_bodyController.text);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -983,10 +1156,7 @@ class _KitabuHomeState extends State<KitabuHome> {
                       child: Text(note.archived ? 'Restore' : 'Archive'),
                     ),
                     OutlinedButton(
-                      onPressed: () {
-                        setState(() => _previewMode = !_previewMode);
-                        _savePreferences();
-                      },
+                      onPressed: _togglePreview,
                       child: Text(_previewMode ? 'Edit' : 'Preview'),
                     ),
                   ],
@@ -1033,6 +1203,13 @@ class _KitabuHomeState extends State<KitabuHome> {
               children: [
                 Text(note.archived ? 'Archived · Updated ${_formatRelative(note.updatedAt)}' : 'Updated ${_formatRelative(note.updatedAt)}'),
                 const Spacer(),
+                Text('${_estimatedReadMinutes(_bodyController.text)} min read'),
+                const SizedBox(width: 10),
+                if (checklistFooter.total > 0)
+                  Text(
+                    '${checklistFooter.checked}/${checklistFooter.total} tasks',
+                  ),
+                const SizedBox(width: 10),
                 Text(
                   '${_wordCount(_bodyController.text)} words · ${_bodyController.text.length} chars'
                   '${_lastSavedAt == null ? '' : ' · Saved ${_formatRelative(_lastSavedAt!)}'}',
@@ -1063,86 +1240,126 @@ class _KitabuHomeState extends State<KitabuHome> {
   @override
   Widget build(BuildContext context) {
     final note = _activeNote;
+    final actions = <Type, Action<Intent>>{
+      CreateNoteIntent: CallbackAction<CreateNoteIntent>(onInvoke: (_) {
+        _createNote();
+        return null;
+      }),
+      SearchIntent: CallbackAction<SearchIntent>(onInvoke: (_) {
+        _focusSearch();
+        return null;
+      }),
+      TogglePreviewIntent: CallbackAction<TogglePreviewIntent>(onInvoke: (_) {
+        _togglePreview();
+        return null;
+      }),
+    };
+    final shortcuts = <ShortcutActivator, Intent>{
+      const SingleActivator(LogicalKeyboardKey.keyN, control: true): const CreateNoteIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyN, meta: true): const CreateNoteIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyF, control: true): const SearchIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyF, meta: true): const SearchIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyP, control: true): const TogglePreviewIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyP, meta: true): const TogglePreviewIntent(),
+    };
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kitabu'),
-        actions: [
-          IconButton(
-            tooltip: widget.darkMode ? 'Switch to light mode' : 'Switch to dark mode',
-            onPressed: _toggleTheme,
-            icon: Icon(widget.darkMode ? Icons.wb_sunny_outlined : Icons.nightlight_outlined),
-          ),
-          IconButton(
-            tooltip: 'Import JSON',
-            onPressed: _importNotes,
-            icon: const Icon(Icons.file_upload_outlined),
-          ),
-          IconButton(
-            tooltip: 'Export JSON',
-            onPressed: _notes.isEmpty ? null : _exportNotes,
-            icon: const Icon(Icons.file_download_outlined),
-          ),
-          IconButton(
-            tooltip: 'New note',
-            onPressed: _createNote,
-            icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            tooltip: 'Delete active note',
-            onPressed: note == null ? null : _deleteActive,
-            icon: const Icon(Icons.delete_outline),
-          ),
-          PopupMenuButton<AppMenuAction>(
-            tooltip: 'More actions',
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: AppMenuAction.duplicate,
-                child: Text('Duplicate note'),
-              ),
-              const PopupMenuItem(
-                value: AppMenuAction.share,
-                child: Text('Share active note'),
-              ),
-              const PopupMenuItem(
-                value: AppMenuAction.clearSearch,
-                child: Text('Clear search'),
-              ),
-              const PopupMenuItem(
-                value: AppMenuAction.stats,
-                child: Text('Workspace stats'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(12),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth >= 940) {
-                    return Row(
-                      children: [
-                        SizedBox(width: 360, child: _buildLibraryPanel()),
-                        const SizedBox(width: 12),
-                        Expanded(child: _buildEditorPanel()),
-                      ],
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      SizedBox(height: 300, child: _buildLibraryPanel()),
-                      const SizedBox(height: 12),
-                      Expanded(child: _buildEditorPanel()),
-                    ],
-                  );
-                },
-              ),
+    return Shortcuts(
+      shortcuts: shortcuts,
+      child: Actions(
+        actions: actions,
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Kitabu'),
+              actions: [
+                IconButton(
+                  tooltip: 'Use template',
+                  onPressed: _showTemplatePicker,
+                  icon: const Icon(Icons.post_add_outlined),
+                ),
+                IconButton(
+                  tooltip: widget.darkMode ? 'Switch to light mode' : 'Switch to dark mode',
+                  onPressed: _toggleTheme,
+                  icon: Icon(widget.darkMode ? Icons.wb_sunny_outlined : Icons.nightlight_outlined),
+                ),
+                IconButton(
+                  tooltip: 'Import JSON',
+                  onPressed: _importNotes,
+                  icon: const Icon(Icons.file_upload_outlined),
+                ),
+                IconButton(
+                  tooltip: 'Export JSON',
+                  onPressed: _notes.isEmpty ? null : _exportNotes,
+                  icon: const Icon(Icons.file_download_outlined),
+                ),
+                IconButton(
+                  tooltip: 'New note (Ctrl/Cmd+N)',
+                  onPressed: _createNote,
+                  icon: const Icon(Icons.add),
+                ),
+                IconButton(
+                  tooltip: 'Delete active note',
+                  onPressed: note == null ? null : _deleteActive,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+                PopupMenuButton<AppMenuAction>(
+                  tooltip: 'More actions',
+                  onSelected: _handleMenuAction,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: AppMenuAction.templates,
+                      child: Text('Note templates'),
+                    ),
+                    const PopupMenuItem(
+                      value: AppMenuAction.duplicate,
+                      child: Text('Duplicate note'),
+                    ),
+                    const PopupMenuItem(
+                      value: AppMenuAction.share,
+                      child: Text('Share active note'),
+                    ),
+                    const PopupMenuItem(
+                      value: AppMenuAction.clearSearch,
+                      child: Text('Clear search'),
+                    ),
+                    const PopupMenuItem(
+                      value: AppMenuAction.stats,
+                      child: Text('Workspace stats'),
+                    ),
+                  ],
+                ),
+              ],
             ),
+            body: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth >= 940) {
+                          return Row(
+                            children: [
+                              SizedBox(width: 360, child: _buildLibraryPanel()),
+                              const SizedBox(width: 12),
+                              Expanded(child: _buildEditorPanel()),
+                            ],
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            SizedBox(height: 300, child: _buildLibraryPanel()),
+                            const SizedBox(height: 12),
+                            Expanded(child: _buildEditorPanel()),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
