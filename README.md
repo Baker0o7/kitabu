@@ -1,58 +1,51 @@
-# Kitabu
+# Kitabu (Flutter)
 
-Kitabu is a beautiful, responsive notes taking app with local-first storage.
+Kitabu is a Flutter notes app with local persistence and Android APK release automation.
 
 ## Features
 
-- Create, edit, pin, and delete notes
-- Archive and restore notes
-- Search across title, content, and tags
-- Markdown-like preview mode (`#`, `##`, `###`, lists, bold, italic, inline code)
-- Autosaves to browser `localStorage`
-- Theme switcher (`Sunrise` / `Midnight`) with persistence
-- Export notes to JSON and import backups
-- Keyboard shortcuts:
-  - `Primary + N`: new note (`Cmd` on Mac/iOS, `Ctrl` elsewhere)
-  - `Primary + D`: delete active note
-  - `Primary + Shift + A`: archive/restore active note
+- Create, edit, pin, archive, restore, and delete notes
+- Search by title, tags, and body
+- Markdown preview mode
+- Theme toggle (light/dark)
+- JSON import and export
+- Local persistence with `SharedPreferences`
 
-Import behavior:
+## Run (local)
 
-- Import merges by note id.
-- If both local and imported note exist, the newer `updatedAt` version wins.
-- Very large import files are rejected for safety.
+Prerequisites:
 
-## Run
+- Flutter SDK (stable)
+- Android SDK (for emulator/device builds)
 
-Open [`index.html`](./index.html) in a browser.
-
-For a local server, from this folder run:
+Commands:
 
 ```bash
-python3 -m http.server 8080
+flutter pub get
+flutter run
 ```
 
-Then open `http://localhost:8080`.
-
-## Android APK
-
-This project uses Capacitor for Android packaging.
-
-Local commands:
+## Build APK (local)
 
 ```bash
-npm install
-npm run cap:sync
-npm run apk:debug
+flutter create . --platforms=android --project-name kitabu --org com.kitabu
+flutter pub get
+flutter build apk --release
 ```
 
-GitHub Actions workflow:
+APK output:
 
-- `.github/workflows/android-apk.yml` builds `app-debug.apk` on pushes to `main` and on manual dispatch.
-- `.github/workflows/android-release.yml` builds APK and publishes a GitHub Release with `app-debug.apk` attached.
+`build/app/outputs/flutter-apk/app-release.apk`
 
-### Publish Release APK
+## CI / Releases
 
-1. GitHub Actions -> `Build And Release APK` -> `Run workflow`.
-2. Set a tag like `v1.0.0`.
-3. The workflow creates a Release and uploads the APK asset automatically.
+- `.github/workflows/android-apk.yml`
+  Builds release APK on push to `main` and manual dispatch.
+- `.github/workflows/android-release.yml`
+  Builds APK and publishes GitHub Release with attached `app-release.apk`.
+
+Manual release:
+
+1. GitHub Actions -> `Build And Release APK` -> `Run workflow`
+2. Enter tag like `v1.0.6`
+3. Workflow publishes release + APK asset
