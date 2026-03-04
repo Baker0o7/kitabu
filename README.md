@@ -23,3 +23,10 @@ With Kitabu, you can:
 - Backup your notes to a zip file which you can restore at a later time
 - Toggle between Light and Dark mode
 - Choose between multiple color schemes
+
+## App Screenshots
+
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="220" alt="Kitabu screenshot 1" />
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="220" alt="Kitabu screenshot 2" />
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="220" alt="Kitabu screenshot 3" />
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="220" alt="Kitabu screenshot 4" />
