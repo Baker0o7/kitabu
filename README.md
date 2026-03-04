@@ -1,28 +1,77 @@
-[![Gitter](https://badges.gitter.im/kitabu/community.svg)](https://gitter.im/kitabu/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Android Build Release](https://github.com/kitabu/kitabu/actions/workflows/android.yml/badge.svg?branch=master)](https://github.com/kitabu/kitabu/actions/workflows/android.yml)
 # Kitabu
-Kitabu is fully free and open-source. It will never show you ads, ask you for unnecessary permissions or upload your notes anywhere without you knowing.
 
-Take beautiful markdown notes whenever you feel inspired. Place them in notebooks and tag them accordingly. Stay organized by making task lists, set reminders and keep everything in one place by attaching related files.
+[![Kitabu APK Release](https://github.com/Baker0o7/kitabu/actions/workflows/kitabu-apk-release.yml/badge.svg)](https://github.com/Baker0o7/kitabu/actions/workflows/kitabu-apk-release.yml)
+[![Android Build Release](https://github.com/Baker0o7/kitabu/actions/workflows/android.yml/badge.svg)](https://github.com/Baker0o7/kitabu/actions/workflows/android.yml)
 
-## Features
-With Kitabu, you can:
+Kitabu is a modern, open-source Android note-taking app focused on speed, privacy, and long-term usability.
 
-- Take notes with Markdown support
-- Make task lists
-- Pin your favorite notes to the top
-- Hide notes you do not want others to see
-- Set reminders for events you do not want to miss
-- Add voice recordings and other file attachments
-- Group related notes in notebooks
-- Add tags to notes
-- Archive notes you want out of your way
-- Search through notes
-- Sync notes to the file system (store notes as markdown files in a local or cloud folder)
-- Sync with Nextcloud (experimental, requires the Nextcloud Notes app installed on the Nextcloud server used for syncing)
-- Backup your notes to a zip file which you can restore at a later time
-- Toggle between Light and Dark mode
-- Choose between multiple color schemes
+It is built for real daily workflows: quick capture, markdown writing, checklists, reminders, attachments, notebooks, tags, backup, and optional sync.
+
+## Highlights
+
+- Markdown note editor with preview support
+- Checklist and task list notes
+- Notebooks and tags for organization
+- Pin, archive, hide, and search notes
+- Reminder support for important notes
+- File attachments (including audio recordings)
+- Local-first backup and restore
+- Sync options:
+  - File-system sync (local/cloud folders as markdown files)
+  - Nextcloud sync (experimental)
+- Light/Dark modes with multiple color themes
+- Per-note encryption toggle in editor
+
+## Tech Stack
+
+- Kotlin + Android View system
+- Room (local database)
+- DataStore + encrypted shared preferences
+- Koin (dependency injection)
+- WorkManager (background tasks)
+- GitHub Actions (CI/CD and APK publishing)
+
+## Build Locally
+
+Prerequisites:
+
+- Android Studio (latest stable recommended)
+- JDK 21
+- Android SDK / Build Tools configured
+
+Build debug APK:
+
+```bash
+./gradlew assembleDebug
+```
+
+Output:
+
+- `app/build/outputs/apk/debug/app-debug.apk`
+
+Build release APK (with signing params):
+
+```bash
+./gradlew assembleRelease \
+  -Pkeystore=keystore.jks \
+  -Pstorepass=*** \
+  -Pkeypass=*** \
+  -Pkeyalias=***
+```
+
+## Release APK (GitHub Actions)
+
+Kitabu uses `.github/workflows/kitabu-apk-release.yml` to build and publish APK releases.
+
+Release flow:
+
+1. Push a tag in format `v*` (example: `v1.0.10`), or
+2. Trigger `Kitabu APK Release` manually via Actions
+
+After completion:
+
+- Release page: `https://github.com/Baker0o7/kitabu/releases`
+- APK asset format: `kitabu-<version>-debug.apk`
 
 ## App Screenshots
 
