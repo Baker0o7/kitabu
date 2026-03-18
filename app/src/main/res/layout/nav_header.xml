@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="160dp"
+    android:background="@color/bg_elevated"
+    android:gravity="bottom"
+    android:orientation="vertical"
+    android:padding="20dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="📓" android:textSize="40sp"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="kitabu" android:textColor="@color/text_primary" android:textSize="22sp"
+        android:fontFamily="@font/inter_semibold" android:layout_marginTop="8dp"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="your second brain" android:textColor="@color/text_hint" android:textSize="13sp"/>
+</LinearLayout>

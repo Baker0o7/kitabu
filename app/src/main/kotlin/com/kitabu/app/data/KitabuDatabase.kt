@@ -1,0 +1,84 @@
+package com.kitabu.app.data
+
+import android.content.Context
+import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+@Database(
+    entities = [Note::class, Tag::class, NoteTag::class, NoteVersion::class, Template::class],
+    version = 2,
+    exportSchema = false
+)
+abstract class KitabuDatabase : RoomDatabase() {
+
+    abstract fun noteDao(): NoteDao
+    abstract fun tagDao(): TagDao
+    abstract fun noteVersionDao(): NoteVersionDao
+    abstract fun templateDao(): TemplateDao
+
+    companion object {
+        @Volatile private var INSTANCE: KitabuDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Extend notes table
+                db.execSQL("ALTER TABLE notes ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN isDaily INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN dailyDate TEXT")
+                db.execSQL("ALTER TABLE notes ADD COLUMN templateId INTEGER")
+
+                // New tables
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS tags (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        color INTEGER NOT NULL DEFAULT -864536121,
+                        createdAt INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS note_tags (
+                        noteId INTEGER NOT NULL,
+                        tagId  INTEGER NOT NULL,
+                        PRIMARY KEY (noteId, tagId),
+                        FOREIGN KEY (noteId) REFERENCES notes(id) ON DELETE CASCADE,
+                        FOREIGN KEY (tagId)  REFERENCES tags(id)  ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_note_tags_noteId ON note_tags(noteId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_note_tags_tagId  ON note_tags(tagId)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS note_versions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        noteId  INTEGER NOT NULL,
+                        title   TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        savedAt INTEGER NOT NULL,
+                        FOREIGN KEY (noteId) REFERENCES notes(id) ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_note_versions_noteId ON note_versions(noteId)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS templates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name      TEXT NOT NULL,
+                        content   TEXT NOT NULL,
+                        icon      TEXT NOT NULL DEFAULT '📄',
+                        isBuiltIn INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
+        fun getDatabase(context: Context): KitabuDatabase {
+            return INSTANCE ?: synchronized(this) {
+                Room.databaseBuilder(context.applicationContext, KitabuDatabase::class.java, "kitabu_db")
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
+                    .also { INSTANCE = it }
+            }
+        }
+    }
+}

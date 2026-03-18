@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="#111118">
+    <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar"
+        android:layout_width="match_parent" android:layout_height="?attr/actionBarSize"
+        android:background="#1E1E2E"/>
+    <com.kitabu.app.ui.graph.GraphView android:id="@+id/graphView"
+        android:layout_width="match_parent" android:layout_height="match_parent"/>
+</LinearLayout>

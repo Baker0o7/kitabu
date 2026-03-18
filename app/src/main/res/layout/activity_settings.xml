@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_primary">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/bg_surface"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✨ AI Settings"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:fontFamily="@font/inter_semibold"
+                android:layout_marginBottom="4dp"/>
+
+            <!-- Free badge -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#1A2D1A"
+                app:cardCornerRadius="12dp"
+                app:strokeColor="#2A5A2A"
+                app:strokeWidth="1dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🆓  Completely free — no credit card"
+                        android:textColor="#66DD66"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/inter_semibold"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Powered by Google Gemini 2.0 Flash.\n• 1,500 requests / day\n• 15 requests / minute\n• 1,000,000 tokens / day\n\nFree forever on Google AI Studio."
+                        android:textColor="#99CCAA"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.5"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Get key button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGetApiKey"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="16dp"
+                android:text="🔑  Get my free API key at aistudio.google.com"
+                android:textSize="13sp"
+                app:backgroundTint="#1A2540"
+                app:strokeColor="@color/accent"
+                app:strokeWidth="1dp"/>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="20dp"
+                android:background="@color/divider"/>
+
+            <!-- Key input label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Paste your Google AI Studio API key"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                app:boxStrokeColor="@color/accent"
+                app:hintTextColor="@color/text_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etApiKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="AIza..."
+                    android:inputType="textPassword"
+                    android:textColor="@color/text_primary"
+                    android:fontFamily="@font/inter_regular"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveApiKey"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:text="Save API Key"
+                android:textSize="15sp"
+                app:backgroundTint="@color/accent"
+                app:cornerRadius="12dp"/>
+
+            <!-- Helper text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Your key is stored only on this device and is never sent anywhere except Google's servers."
+                android:textColor="@color/text_hint"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.4"/>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
