@@ -183,6 +183,9 @@
         <item name="kitabu_divider">@color/slate_divider</item>
     </style>
 
+    <!-- ── Default alias — manifest references this ── -->
+    <style name="Theme.Kitabu" parent="Theme.Kitabu.Noir"/>
+
     <!-- ── Dialogs + overlays (theme-neutral) ── -->
     <style name="KitabuTitle" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
         <item name="android:textColor">?attr/kitabu_text_primary</item>
