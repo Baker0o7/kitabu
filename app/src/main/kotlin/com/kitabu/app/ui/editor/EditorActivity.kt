@@ -8,7 +8,6 @@ import android.speech.RecognizerIntent
 import android.text.*
 import android.view.*
 import android.widget.HorizontalScrollView
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -147,19 +146,6 @@ class EditorActivity : AppCompatActivity() {
 
         val toolbar = binding.markdownToolbar
         actions.forEach { (label, action) ->
-            val btn = ImageButton(this).apply {
-                text?.let { }  // satisfy lint
-                // Use text view approach for label buttons
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                ).also { it.marginEnd = 4.dp }
-                setPadding(12.dp.toInt(), 0, 12.dp.toInt(), 0)
-                background = ContextCompat.getDrawable(context, R.drawable.bg_toolbar_btn)
-                contentDescription = label
-                setOnClickListener { action() }
-            }
-            // Use a TextView instead to show text labels
             val tv = android.widget.TextView(this).apply {
                 text = label
                 textSize = 13f
