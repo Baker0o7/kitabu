@@ -9,7 +9,6 @@ permissions:
   contents: write
 
 env:
-  # Wipe runner-injected JVM flags globally — prevents "-Xmx64m ClassNotFoundException"
   JAVA_TOOL_OPTIONS: ""
 
 jobs:
@@ -17,47 +16,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Source ─────────────────────────────────────────────────────────
       - uses: actions/checkout@v4
 
-      # ── 2. JDK 17 ────────────────────────────────────────────────────────
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # ── 3. Gradle wrapper jar (official action — no manual bootstrap) ─────
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      # Download gradle-wrapper.jar — not stored in repo
+      - name: Download gradle-wrapper.jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -fL \
+            "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          curl -fL \
+            "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          wget -q \
+            "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -O gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/
 
-      # ── 4. Android SDK path ───────────────────────────────────────────────
       - name: Write local.properties
         run: printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 
-      # ── 5. Accept ALL SDK licences ────────────────────────────────────────
       - name: Accept SDK licences
         run: |
           mkdir -p "$ANDROID_HOME/licenses"
-          printf '%s\n' \
-            "8933bad161af4178b1185d1a37fbf41ea5269c55" \
-            "d56f5187479451eabf01fb78af6dfcb131a6481e" \
-            "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
-            "84831b9409646a918e30573bab4c9c91346d8abd" \
-            > "$ANDROID_HOME/licenses/android-sdk-license"
-          printf '%s\n' \
-            "d975f751698a77b662f1254ddbeed3901e976f5a" \
-            > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> "$ANDROID_HOME/licenses/android-sdk-license"
 
-      # ── 6. Fonts (DejaVu substitution — metrics close enough for CI) ──────
       - name: Provide fonts
         run: |
           mkdir -p app/src/main/res/font
           D=/usr/share/fonts/truetype/dejavu
-          cp "$D/DejaVuSans.ttf"       app/src/main/res/font/inter_regular.ttf
-          cp "$D/DejaVuSans.ttf"       app/src/main/res/font/inter_medium.ttf
-          cp "$D/DejaVuSans-Bold.ttf"  app/src/main/res/font/inter_semibold.ttf
+          cp "$D/DejaVuSans.ttf"      app/src/main/res/font/inter_regular.ttf
+          cp "$D/DejaVuSans.ttf"      app/src/main/res/font/inter_medium.ttf
+          cp "$D/DejaVuSans-Bold.ttf" app/src/main/res/font/inter_semibold.ttf
 
-      # ── 7. Gradle cache ───────────────────────────────────────────────────
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -67,33 +65,27 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      # ── 8. Build ──────────────────────────────────────────────────────────
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            -Dorg.gradle.jvmargs="-Xmx2g -XX:+HeapDumpOnOutOfMemoryError"
+          ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2g"
 
-      # ── 9. Collect ────────────────────────────────────────────────────────
       - name: Collect APK
         run: |
           TAG="${GITHUB_REF_NAME:-dev-$(date +%Y%m%d)}"
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk "dist/kitabu-${TAG}.apk"
           echo "APK_NAME=kitabu-${TAG}.apk" >> "$GITHUB_ENV"
-          echo "✅ APK: $(du -sh dist/kitabu-${TAG}.apk | cut -f1)"
+          echo "Size: $(du -sh dist/kitabu-${TAG}.apk | cut -f1)"
 
-      # ── 10. Upload artifact ───────────────────────────────────────────────
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_NAME }}
           path: dist/${{ env.APK_NAME }}
           retention-days: 30
 
-      # ── 11. GitHub Release (tag pushes only) ─────────────────────────────
       - name: Publish Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -121,7 +113,7 @@ jobs:
             3. Tap the APK to install
 
             ### 🤖 Free AI
-            Get a Gemini key at [aistudio.google.com](https://aistudio.google.com/apikey) → ☰ → Settings
+            Gemini key at [aistudio.google.com](https://aistudio.google.com/apikey) → ☰ → Settings
           files: dist/${{ env.APK_NAME }}
           draft: false
           prerelease: false
