@@ -4,7 +4,10 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:  # allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -20,86 +23,87 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Install Inter fonts
+      - name: Bootstrap Gradle wrapper
         run: |
-          mkdir -p app/src/main/res/font
-          # Download Inter from Google Fonts bunny CDN (open mirror)
-          curl -fL "https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" -o /tmp/inter400.woff2 || true
-          # Use DejaVu as fallback (always available on ubuntu-latest)
-          FONT_DIR="/usr/share/fonts/truetype/dejavu"
-          cp "$FONT_DIR/DejaVuSans.ttf"      app/src/main/res/font/inter_regular.ttf
-          cp "$FONT_DIR/DejaVuSans.ttf"      app/src/main/res/font/inter_medium.ttf
-          cp "$FONT_DIR/DejaVuSans-Bold.ttf" app/src/main/res/font/inter_semibold.ttf
-          echo "Fonts ready:"
-          ls -lh app/src/main/res/font/
+          GRADLE_VERSION="8.4"
+          curl -fL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+            -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+          /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle wrapper \
+            --gradle-version "${GRADLE_VERSION}" \
+            --project-dir "$(pwd)"
+          chmod +x gradlew
+          ls -lh gradle/wrapper/
 
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
-
-      - name: Cache Gradle packages
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Provide fonts
+        run: |
+          mkdir -p app/src/main/res/font
+          DEJAVU="/usr/share/fonts/truetype/dejavu"
+          cp "$DEJAVU/DejaVuSans.ttf"      app/src/main/res/font/inter_regular.ttf
+          cp "$DEJAVU/DejaVuSans.ttf"      app/src/main/res/font/inter_medium.ttf
+          cp "$DEJAVU/DejaVuSans-Bold.ttf" app/src/main/res/font/inter_semibold.ttf
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
         env:
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx2g"
+          GRADLE_OPTS: "-Xmx2g -Dorg.gradle.daemon=false"
 
-      - name: Rename APK
+      - name: Collect APK
         run: |
+          TAG="${{ github.ref_name }}"
+          [ -z "$TAG" ] && TAG="dev-$(date +%Y%m%d)"
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/kitabu-v1.0.0.apk
-          echo "APK size: $(du -sh dist/kitabu-v1.0.0.apk | cut -f1)"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/kitabu-${TAG}.apk"
+          echo "APK_NAME=kitabu-${TAG}.apk" >> "$GITHUB_ENV"
+          echo "APK size: $(du -sh dist/kitabu-${TAG}.apk)"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kitabu-apk
-          path: dist/kitabu-v1.0.0.apk
+          name: ${{ env.APK_NAME }}
+          path: dist/${{ env.APK_NAME }}
           retention-days: 30
 
-      - name: Create GitHub Release with APK
-        uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
         with:
           name: "Kitabu ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           body: |
             ## 📓 Kitabu ${{ github.ref_name }}
+            A full-featured, dark-themed **second brain** notes app for Android.
 
-            A full-featured, dark-themed second brain notes app for Android.
-
-            ### ✨ What's inside
+            ### ✨ Features
             - 📝 Rich Markdown editor with live preview
             - 🔗 Bi-directional `[[wikilinks]]` + backlinks
             - 🌐 Knowledge graph (force-directed, zoomable)
             - 🏷️ Nested tags (`#work/meetings`)
             - 📅 Daily notes + 5 built-in templates
             - 🕓 Version history with restore
-            - 🤖 AI Assistant — Gemini Flash (free tier, 1,500 req/day)
+            - 🤖 AI Assistant — Gemini Flash (free, 1,500 req/day)
             - 🎙️ Voice-to-text input
             - 🔒 Biometric note lock
-            - 🎨 8 visual themes (Noir, Midnight, Forest, Crimson, Dusk, Nord, Rose, Slate)
+            - 🎨 8 themes: Noir · Midnight · Forest · Crimson · Dusk · Nord · Rose · Slate
 
             ### 📲 Install
-            1. Download `kitabu-${{ github.ref_name }}.apk` below
-            2. Enable **Install from unknown sources** on your device
-            3. Open the APK to install
+            1. Download **`${{ env.APK_NAME }}`** below
+            2. On your phone: **Settings → Install unknown apps → Allow**
+            3. Open the APK and install
 
-            ### ⚙️ AI Setup (optional)
-            Get a **free** Gemini API key at [aistudio.google.com](https://aistudio.google.com/apikey) → paste in ☰ Settings
-
-            ---
-            Built with Kotlin · Room · Markwon · Material 3
-          files: dist/kitabu-v1.0.0.apk
+            ### 🤖 Free AI Setup
+            Get a Gemini key at [aistudio.google.com](https://aistudio.google.com/apikey) → ☰ → Settings
+          files: dist/${{ env.APK_NAME }}
           draft: false
           prerelease: false
         env:
