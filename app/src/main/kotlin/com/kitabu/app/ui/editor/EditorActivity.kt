@@ -8,7 +8,10 @@ import android.speech.RecognizerIntent
 import android.text.*
 import android.view.*
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.GridLayout
+import android.widget.TextView as AndroidTextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -142,6 +145,7 @@ class EditorActivity : AppCompatActivity() {
             "☑"  to { insertLine("- [ ] ") },
             "—"  to { insertAtCursor("\n---\n") },
             "🔗" to { insertWikiLink() },
+            "⊞"  to { showTableDialog() },
             "🎙" to { startVoiceInput() },
             "👁" to { togglePreview() }
         )
@@ -199,6 +203,152 @@ class EditorActivity : AppCompatActivity() {
         val pos = et.selectionStart.coerceAtLeast(0)
         et.text?.insert(pos, text)
         et.setSelection(pos + text.length)
+    }
+
+    // ── Table insertion ────────────────────────────────────────────────
+
+    private fun showTableDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_table_input, null)
+        val etRows    = dialogView.findViewById<EditText>(R.id.etTableRows)
+        val etCols    = dialogView.findViewById<EditText>(R.id.etTableCols)
+        val gridContainer = dialogView.findViewById<GridLayout>(R.id.gridTableInput)
+        val btnBuild  = dialogView.findViewById<android.widget.Button>(R.id.btnBuildTable)
+
+        etRows.setText("3")
+        etCols.setText("3")
+
+        fun rebuildGrid() {
+            val rows = etRows.text.toString().toIntOrNull()?.coerceIn(1, 20) ?: 0
+            val cols = etCols.text.toString().toIntOrNull()?.coerceIn(1, 8)  ?: 0
+            if (rows == 0 || cols == 0) return
+
+            gridContainer.removeAllViews()
+            gridContainer.columnCount = cols + 1 // +1 for row label column
+
+            // Top-left empty cell
+            gridContainer.addView(AndroidTextView(this).apply {
+                text = ""
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(context, R.color.text_hint))
+            })
+
+            // Column headers (editable)
+            val headerLabels = mutableListOf<EditText>()
+            for (c in 0 until cols) {
+                val headerEt = EditText(this).apply {
+                    hint = "Col ${c + 1}"
+                    textSize = 13f
+                    setTextColor(ContextCompat.getColor(context, R.color.accent))
+                    setHintTextColor(ContextCompat.getColor(context, R.color.text_hint))
+                    setBackgroundColor(0x00000000)
+                    setPadding(6, 8, 6, 8)
+                    setTextColor(android.graphics.Color.WHITE)
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                    layoutParams = GridLayout.LayoutParams().apply {
+                        width = 0
+                        columnSpec = GridLayout.spec(c + 1, 1f)
+                    }
+                }
+                headerLabels.add(headerEt)
+                gridContainer.addView(headerEt)
+            }
+
+            // Data rows
+            val dataEdits = mutableListOf<MutableList<EditText>>()
+            for (r in 0 until rows) {
+                // Row number label
+                gridContainer.addView(AndroidTextView(this).apply {
+                    text = "R${r + 1}"
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(context, R.color.text_hint))
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(4, 8, 8, 8)
+                })
+
+                val rowEdits = mutableListOf<EditText>()
+                for (c in 0 until cols) {
+                    val cellEt = EditText(this).apply {
+                        hint = "..."
+                        textSize = 13f
+                        setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                        setHintTextColor(ContextCompat.getColor(context, R.color.text_hint))
+                        setBackgroundColor(0x00000000)
+                        setPadding(6, 8, 6, 8)
+                        inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                        layoutParams = GridLayout.LayoutParams().apply {
+                            width = 0
+                            columnSpec = GridLayout.spec(c + 1, 1f)
+                        }
+                    }
+                    rowEdits.add(cellEt)
+                    gridContainer.addView(cellEt)
+                }
+                dataEdits.add(rowEdits)
+            }
+
+            // Store references for the build button
+            gridContainer.setTag(0, headerLabels)
+            gridContainer.setTag(1, dataEdits)
+        }
+
+        // Initial build
+        rebuildGrid()
+
+        // Rebuild when rows/cols change
+        etRows.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) = rebuildGrid()
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        etCols.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) = rebuildGrid()
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+
+        val dialog = MaterialAlertDialogBuilder(this, R.style.KitabuDialog)
+            .setTitle("Insert Table")
+            .setView(dialogView)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        btnBuild.setOnClickListener {
+            @Suppress("UNCHECKED_CAST")
+            val headers = (gridContainer.getTag(0) as? List<EditText>)?.map { it.text.toString().trim() } ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            val allRows = (gridContainer.getTag(1) as? List<List<EditText>>)?.map { row ->
+                row.map { it.text.toString().trim() }
+            } ?: emptyList()
+
+            val tableMd = buildMarkdownTable(headers, allRows)
+            insertAtCursor(tableMd)
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun buildMarkdownTable(headers: List<String>, rows: List<List<String>>): String {
+        val cols = headers.size.coerceAtLeast(if (rows.isNotEmpty()) rows[0].size else 0)
+        if (cols == 0) return ""
+
+        val sb = StringBuilder()
+        sb.append("\n")
+
+        // Header row
+        sb.append("| ${headers.map { it.ifBlank { "Col" } }.joinToString(" | ")} |\n")
+
+        // Separator
+        sb.append("| ${headers.indices.joinToString(" | ") { "---" } |\n")
+
+        // Data rows
+        rows.forEach { row ->
+            val cells = row + List(cols - row.size) { "" }
+            sb.append("| ${cells.joinToString(" | ")} |\n")
+        }
+
+        sb.append("\n")
+        return sb.toString()
     }
 
     private fun insertWikiLink() {
