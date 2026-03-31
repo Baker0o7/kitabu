@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="kitabu_bg_primary"    format="color"/>
+    <attr name="kitabu_bg_surface"    format="color"/>
+    <attr name="kitabu_bg_elevated"   format="color"/>
+    <attr name="kitabu_accent"        format="color"/>
+    <attr name="kitabu_text_primary"  format="color"/>
+    <attr name="kitabu_text_secondary" format="color"/>
+    <attr name="kitabu_text_hint"     format="color"/>
+    <attr name="kitabu_divider"       format="color"/>
+</resources>

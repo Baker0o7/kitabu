@@ -1,0 +1,126 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  JAVA_TOOL_OPTIONS: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Download gradle-wrapper.jar — not stored in repo
+      - name: Download gradle-wrapper.jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -fL \
+            "https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          curl -fL \
+            "https://raw.githubusercontent.com/gradle/gradle/v8.11.1/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          wget -q \
+            "https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar" \
+            -O gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/
+
+      - name: Write local.properties
+        run: printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+
+      - name: Accept SDK licences
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses"
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> "$ANDROID_HOME/licenses/android-sdk-license"
+
+      - name: Provide fonts
+        run: |
+          mkdir -p app/src/main/res/font
+          D=/usr/share/fonts/truetype/dejavu
+          cp "$D/DejaVuSans.ttf"      app/src/main/res/font/inter_regular.ttf
+          cp "$D/DejaVuSans.ttf"      app/src/main/res/font/inter_medium.ttf
+          cp "$D/DejaVuSans-Bold.ttf" app/src/main/res/font/inter_semibold.ttf
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2g"
+
+      - name: Collect APK
+        run: |
+          TAG="${GITHUB_REF_NAME:-dev-$(date +%Y%m%d)}"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/kitabu-${TAG}.apk"
+          echo "APK_NAME=kitabu-${TAG}.apk" >> "$GITHUB_ENV"
+          echo "Size: $(du -sh dist/kitabu-${TAG}.apk | cut -f1)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}
+          path: dist/${{ env.APK_NAME }}
+          retention-days: 30
+
+      - name: Publish Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Kitabu ${{ github.ref_name }}"
+          body: |
+            ## Kitabu ${{ github.ref_name }}
+            A full-featured dark-themed **second brain** notes app for Android.
+
+            ### Features
+            - Rich Markdown editor with live preview
+            - Bi-directional [[wikilinks]] + backlinks
+            - Knowledge graph (force-directed, zoomable)
+            - Nested tags (#work/meetings)
+            - Daily notes + 8 built-in templates
+            - Version history with restore
+            - AI Assistant - Gemini Flash (free, 1,500 req/day)
+            - Voice-to-text input
+            - Biometric note lock
+            - Note archive
+            - 9 themes: Noir, Midnight, Forest, Crimson, Dusk, Nord, Rose, Slate, Aurora
+            - Smart text stats with reading time
+            - Code block insertion
+            - Tag rename support
+            - Custom template creation
+
+            ### Install
+            1. Download **`${{ env.APK_NAME }}`** below
+            2. Phone: Settings > Install unknown apps > Allow
+            3. Tap the APK to install
+
+            ### Free AI
+            Gemini key at [aistudio.google.com](https://aistudio.google.com/apikey) > Settings
+          files: dist/${{ env.APK_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
