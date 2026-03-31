@@ -20,19 +20,19 @@ class ReminderReceiver : BroadcastReceiver() {
         const val CHANNEL_NAME = "Note Reminders"
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(context: Context, intent: android.content.Intent) {
         val noteId = intent.getIntExtra(EXTRA_NOTE_ID, -1)
         val title = intent.getStringExtra(EXTRA_NOTE_TITLE) ?: "Note Reminder"
         val content = intent.getStringExtra(EXTRA_NOTE_CONTENT) ?: ""
 
         createNotificationChannel(context)
 
-        val openIntent = Intent(context, MainActivity::class.java).apply {
-            putExtra("open_note_id", noteId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        val pendingIntent = PendingIntent.getActivity(context, noteId, openIntent, flags)
+        val openIntent = Intent(context, MainActivity::class.java)
+        openIntent.putExtra("open_note_id", noteId)
+        openIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+        val pFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getActivity(context, noteId, openIntent, pFlags)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_calendar)

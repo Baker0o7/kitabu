@@ -24,14 +24,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notes: LiveData<List<NoteWithTags>> = combine(
-        _searchQuery.debounce(300), _sortOrder, _filterTagId, _showDailyOnly, _showArchivedOnly, _showFavoritesOnly
-    ) { q, sort, tagId, dailyOnly, archivedOnly, favoritesOnly ->
-        FilterState(q, sort, tagId, dailyOnly, archivedOnly, favoritesOnly)
+        _searchQuery.debounce(300), _sortOrder, _filterTagId, _showDailyOnly, _showArchivedOnly
+    ) { q, sort, tagId, dailyOnly, archivedOnly ->
+        FilterState(q, sort, tagId, dailyOnly, archivedOnly)
     }
         .flatMapLatest { state ->
             val base: Flow<List<NoteWithTags>> = when {
+                _showFavoritesOnly.value -> repo.favoriteNotes
                 state.archivedOnly   -> repo.archivedNotes
-                state.favoritesOnly  -> repo.favoriteNotes
                 state.dailyOnly      -> repo.dailyNotes
                 state.tagId != null  -> repo.getNotesByTag(state.tagId)
                 state.query.isNotBlank() -> repo.searchNotes(state.query)
@@ -47,8 +47,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         val sort: SortOrder,
         val tagId: Int?,
         val dailyOnly: Boolean,
-        val archivedOnly: Boolean,
-        val favoritesOnly: Boolean
+        val archivedOnly: Boolean
     )
 
     private fun sorted(list: List<NoteWithTags>, sort: SortOrder): List<NoteWithTags> {
@@ -72,16 +71,19 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         _filterTagId.value = tagId
         _showDailyOnly.value = false
         _showArchivedOnly.value = false
+        _showFavoritesOnly.value = false
     }
     fun showDailyNotes(v: Boolean)      {
         _showDailyOnly.value = v
         _filterTagId.value = null
         _showArchivedOnly.value = false
+        _showFavoritesOnly.value = false
     }
     fun showArchivedNotes(v: Boolean)   {
         _showArchivedOnly.value = v
         _filterTagId.value = null
         _showDailyOnly.value = false
+        _showFavoritesOnly.value = false
     }
     fun showFavoritesNotes(v: Boolean) {
         _showFavoritesOnly.value = v
@@ -107,7 +109,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun trash(note: Note) = viewModelScope.launch { repo.toggleTrash(note) }
     fun emptyTrash() = viewModelScope.launch { repo.emptyTrash() }
     suspend fun getTrashedCount() = repo.getTrashedCount()
-    fun exportAll() = viewModelScope.launch { /* handled in activity */ }
 
     suspend fun getNoteById(id: Int) = repo.getNoteById(id)
     suspend fun getNoteWithTagsById(id: Int) = repo.getNoteWithTagsById(id)
