@@ -21,7 +21,7 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: AndroidIntent) {
         val noteId = intent.getIntExtra(EXTRA_NOTE_ID, -1)
         val title = intent.getStringExtra(EXTRA_NOTE_TITLE) ?: "Note Reminder"
-        val content = intent.getStringExtra(EXTRA_CONTENT) ?: ""
+        val content = intent.getStringExtra(EXTRA_NOTE_CONTENT) ?: ""
 
         createNotificationChannel(context)
 

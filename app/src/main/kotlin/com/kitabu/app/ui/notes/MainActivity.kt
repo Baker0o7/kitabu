@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private var showingTrashed = false
     private var showingFavorites = false
 
-    private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent("*/*")) { uri: Uri? ->
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleImport(it) }
     }
 
@@ -320,7 +320,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun importNotes() {
-        importLauncher.launch(null)
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+        }
+        importLauncher.launch(intent)
     }
 
     private fun handleImport(uri: Uri) {
