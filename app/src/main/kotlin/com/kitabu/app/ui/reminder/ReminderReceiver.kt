@@ -5,10 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
+import android.content.Intent as AndroidIntent
 import androidx.core.app.NotificationCompat
-import com.kitabu.app.MainActivity
-import com.kitabu.app.R
 
 class ReminderReceiver : BroadcastReceiver() {
 
@@ -20,22 +18,22 @@ class ReminderReceiver : BroadcastReceiver() {
         const val CHANNEL_NAME = "Note Reminders"
     }
 
-    override fun onReceive(context: Context, intent: android.content.Intent) {
+    override fun onReceive(context: Context, intent: AndroidIntent) {
         val noteId = intent.getIntExtra(EXTRA_NOTE_ID, -1)
         val title = intent.getStringExtra(EXTRA_NOTE_TITLE) ?: "Note Reminder"
-        val content = intent.getStringExtra(EXTRA_NOTE_CONTENT) ?: ""
+        val content = intent.getStringExtra(EXTRA_CONTENT) ?: ""
 
         createNotificationChannel(context)
 
-        val openIntent = Intent(context, MainActivity::class.java)
+        val openIntent = AndroidIntent(context, Class.forName("com.kitabu.app.ui.notes.MainActivity"))
         openIntent.putExtra("open_note_id", noteId)
-        openIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        openIntent.flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK or AndroidIntent.FLAG_ACTIVITY_CLEAR_TOP
 
         val pFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pendingIntent = PendingIntent.getActivity(context, noteId, openIntent, pFlags)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_calendar)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
