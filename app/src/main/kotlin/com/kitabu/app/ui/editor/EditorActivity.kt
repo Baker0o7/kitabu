@@ -336,15 +336,18 @@ class EditorActivity : AppCompatActivity() {
         sb.append("\n")
 
         // Header row
-        sb.append("| ${headers.map { it.ifBlank { "Col" } }.joinToString(" | ")} |\n")
+        val headerLine = headers.map { it.ifBlank { "Col" } }.joinToString(" | ")
+        sb.append("| $headerLine |\n")
 
         // Separator
-        sb.append("| ${headers.indices.joinToString(" | ") { "---" } |\n")
+        val sepLine = headers.indices.joinToString(" | ") { "---" }
+        sb.append("| $sepLine |\n")
 
         // Data rows
         rows.forEach { row ->
             val cells = row + List(cols - row.size) { "" }
-            sb.append("| ${cells.joinToString(" | ")} |\n")
+            val rowLine = cells.joinToString(" | ")
+            sb.append("| $rowLine |\n")
         }
 
         sb.append("\n")
