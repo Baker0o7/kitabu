@@ -9,7 +9,7 @@ interface NoteDao {
     // --- Notes with Tags ---
 
     @Transaction
-    @Query("SELECT * FROM notes WHERE isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE isArchived = 0 AND isTrashed = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllNotesWithTags(): Flow<List<NoteWithTags>>
 
     @Transaction
@@ -17,7 +17,7 @@ interface NoteDao {
         SELECT DISTINCT notes.* FROM notes
         LEFT JOIN note_tags ON notes.id = note_tags.noteId
         WHERE (notes.title LIKE '%' || :q || '%' OR notes.content LIKE '%' || :q || '%')
-        AND notes.isArchived = 0
+        AND notes.isArchived = 0 AND notes.isTrashed = 0
         ORDER BY notes.isPinned DESC, notes.updatedAt DESC
     """)
     fun searchNotesWithTags(q: String): Flow<List<NoteWithTags>>
@@ -27,17 +27,17 @@ interface NoteDao {
         SELECT DISTINCT notes.* FROM notes
         INNER JOIN note_tags ON notes.id = note_tags.noteId
         WHERE note_tags.tagId = :tagId
-        AND notes.isArchived = 0
+        AND notes.isArchived = 0 AND notes.isTrashed = 0
         ORDER BY notes.isPinned DESC, notes.updatedAt DESC
     """)
     fun getNotesByTagWithTags(tagId: Int): Flow<List<NoteWithTags>>
 
     @Transaction
-    @Query("SELECT * FROM notes WHERE isDaily = 1 AND isArchived = 0 ORDER BY dailyDate DESC")
+    @Query("SELECT * FROM notes WHERE isDaily = 1 AND isArchived = 0 AND isTrashed = 0 ORDER BY dailyDate DESC")
     fun getDailyNotesWithTags(): Flow<List<NoteWithTags>>
 
     @Transaction
-    @Query("SELECT * FROM notes WHERE isArchived = 1 ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE isArchived = 1 AND isTrashed = 0 ORDER BY updatedAt DESC")
     fun getArchivedNotesWithTags(): Flow<List<NoteWithTags>>
 
     @Transaction
@@ -50,7 +50,7 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE isDaily = 1 AND dailyDate = :date LIMIT 1")
     suspend fun getDailyNote(date: String): Note?
 
-    @Query("SELECT * FROM notes WHERE reminderTime IS NOT NULL AND reminderTime > :now AND isArchived = 0 ORDER BY reminderTime ASC")
+    @Query("SELECT * FROM notes WHERE reminderTime IS NOT NULL AND reminderTime > :now AND isArchived = 0 AND isTrashed = 0 ORDER BY reminderTime ASC")
     fun getNotesWithReminders(now: Long = System.currentTimeMillis()): Flow<List<Note>>
 
     // Wikilink: find notes whose title matches
@@ -58,11 +58,11 @@ interface NoteDao {
     suspend fun findNoteByTitle(title: String, excludeId: Int = -1): Note?
 
     // Autocomplete: find notes whose title starts with prefix
-    @Query("SELECT * FROM notes WHERE title LIKE :prefix || '%' AND isArchived = 0 ORDER BY updatedAt DESC LIMIT 10")
+    @Query("SELECT * FROM notes WHERE title LIKE :prefix || '%' AND isArchived = 0 AND isTrashed = 0 ORDER BY updatedAt DESC LIMIT 10")
     suspend fun searchTitlesByPrefix(prefix: String): List<Note>
 
     // Backlinks: find notes whose content contains [[title]]
-    @Query("SELECT * FROM notes WHERE content LIKE '%[[' || :title || ']]%' AND id != :excludeId")
+    @Query("SELECT * FROM notes WHERE content LIKE '%[[' || :title || ']]%' AND id != :excludeId AND isTrashed = 0")
     fun getBacklinks(title: String, excludeId: Int = -1): Flow<List<Note>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -77,7 +77,7 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE id = :id")
     suspend fun deleteNoteById(id: Int)
 
-    @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 0")
+    @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 0 AND isTrashed = 0")
     suspend fun getCount(): Int
 
     @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 1")
@@ -93,4 +93,37 @@ interface NoteDao {
 
     @Query("DELETE FROM note_tags WHERE noteId = :noteId")
     suspend fun clearNoteTags(noteId: Int)
+
+    // --- Trash ---
+
+    @Query("SELECT * FROM notes WHERE isTrashed = 1 ORDER BY trashedAt DESC")
+    fun getTrashedNotesWithTags(): Flow<List<NoteWithTags>>
+
+    @Query("SELECT COUNT(*) FROM notes WHERE isTrashed = 1")
+    suspend fun getTrashedCount(): Int
+
+    @Query("DELETE FROM notes WHERE isTrashed = 1 AND trashedAt < :cutoffTime")
+    suspend fun purgeExpiredTrash(cutoffTime: Long)
+
+    // --- Favorites ---
+
+    @Query("SELECT * FROM notes WHERE isFavorite = 1 AND isArchived = 0 AND isTrashed = 0 ORDER BY updatedAt DESC")
+    fun getFavoriteNotesWithTags(): Flow<List<NoteWithTags>>
+
+    // --- Non-flow versions for export ---
+
+    @Query("SELECT * FROM notes ORDER BY id")
+    suspend fun getAllNotesRaw(): List<Note>
+
+    @Query("SELECT * FROM tags ORDER BY id")
+    suspend fun getAllTagsRaw(): List<Tag>
+
+    @Query("SELECT * FROM note_tags ORDER BY noteId, tagId")
+    suspend fun getAllNoteTagsRaw(): List<NoteTag>
+
+    @Query("SELECT * FROM note_versions ORDER BY noteId, savedAt DESC")
+    suspend fun getAllVersionsRaw(): List<NoteVersion>
+
+    @Query("SELECT * FROM templates ORDER BY id")
+    suspend fun getAllTemplatesRaw(): List<Template>
 }

@@ -1,6 +1,8 @@
 package com.kitabu.app.ui.editor
 
 import android.Manifest
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -8,6 +10,7 @@ import android.speech.RecognizerIntent
 import android.text.*
 import android.view.*
 import android.widget.ArrayAdapter
+import android.widget.DatePicker
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.GridLayout
@@ -33,6 +36,9 @@ import com.kitabu.app.util.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.util.Calendar
 import java.util.Locale
 
 class EditorActivity : AppCompatActivity() {
@@ -49,10 +55,12 @@ class EditorActivity : AppCompatActivity() {
     private var selectedColor = NoteColor.DEFAULT
     private var isPinned = false
     private var isLocked = false
+    private var isFavorite = false
     private var isPreviewMode = false
     private var currentNoteId = -1
     private var selectedTagIds = mutableListOf<Int>()
     private var lastSavedHash = 0
+    private var reminderTime: Long? = null
 
     private val markwon by lazy { MarkdownHelper.buildMarkwon(this) }
     private var autoSaveJob: Job? = null
@@ -89,6 +97,22 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    // ── Keyboard Shortcuts ───────────────────────────────────────────
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val ctrl = event.isCtrlPressed || event.isMetaPressed
+            when {
+                ctrl && event.keyCode == KeyEvent.KEYCODE_B -> { wrap("**", "**"); return true }
+                ctrl && event.keyCode == KeyEvent.KEYCODE_I -> { wrap("_", "_"); return true }
+                ctrl && event.keyCode == KeyEvent.KEYCODE_S -> { performSave(); return true }
+                ctrl && event.keyCode == KeyEvent.KEYCODE_K -> { insertWikiLink(); return true }
+                ctrl && event.keyCode == KeyEvent.KEYCODE_P -> { togglePreview(); return true }
+                ctrl && event.keyCode == KeyEvent.KEYCODE_N -> { showTableDialog(); return true }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     // ── Load / Template ────────────────────────────────────────────────────
 
     private fun loadNote(id: Int) {
@@ -98,21 +122,29 @@ class EditorActivity : AppCompatActivity() {
             existingNote   = nwt.note
             isPinned       = nwt.note.isPinned
             isLocked       = nwt.note.isLocked
+            isFavorite     = nwt.note.isFavorite
             selectedColor  = nwt.note.color
+            reminderTime   = nwt.note.reminderTime
             selectedTagIds = nwt.tags.map { it.id }.toMutableList()
-            lastSavedHash = computeHash(nwt.note.title, nwt.note.content)
+
+            // Decrypt content if locked
+            val content = if (nwt.note.isLocked) {
+                CryptoHelper.decrypt(nwt.note.content)
+            } else {
+                nwt.note.content
+            }
+
+            lastSavedHash = computeHash(nwt.note.title, content)
 
             binding.etTitle.setText(nwt.note.title)
-            binding.etContent.setText(nwt.note.content)
+            binding.etContent.setText(content)
             applyColor(nwt.note.color)
             updateTagChips(nwt.tags)
             invalidateOptionsMenu()
 
-            // Observe backlinks
+            // Observe backlinks - show as tappable list
             vm.getBacklinks(nwt.note.title, id).observe(this@EditorActivity) { links ->
-                binding.tvBacklinks.text = if (links.isEmpty()) ""
-                    else "← ${links.size} backlink${if (links.size > 1) "s" else ""}"
-                binding.tvBacklinks.visibility = if (links.isEmpty()) View.GONE else View.VISIBLE
+                setupBacklinksPanel(links)
             }
         }
     }
@@ -128,6 +160,49 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    // ── Backlinks Panel ──────────────────────────────────────────────
+    private fun setupBacklinksPanel(links: List<Note>) {
+        binding.tvBacklinks.visibility = View.GONE
+        binding.backlinksContainer.removeAllViews()
+
+        if (links.isEmpty()) return
+
+        // Show header
+        val header = AndroidTextView(this).apply {
+            text = "Backlinks (${links.size})"
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            setPadding(0, 16, 0, 4)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        binding.backlinksContainer.addView(header)
+
+        links.take(5).forEach { link ->
+            val item = AndroidTextView(this).apply {
+                text = "  -> ${link.title.ifBlank { "Untitled" }}"
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                setPadding(16, 8, 0, 8)
+                setBackgroundResource(R.drawable.bg_preview_dot)
+                setOnClickListener {
+                    startActivity(Intent(this@EditorActivity, EditorActivity::class.java)
+                        .putExtra(EXTRA_NOTE_ID, link.id))
+                }
+            }
+            binding.backlinksContainer.addView(item)
+        }
+
+        if (links.size > 5) {
+            val more = AndroidTextView(this).apply {
+                text = "  +${links.size - 5} more"
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(context, R.color.text_hint))
+                setPadding(16, 4, 0, 8)
+            }
+            binding.backlinksContainer.addView(more)
+        }
+    }
+
     // ── Markdown toolbar ───────────────────────────────────────────────────
 
     private fun setupMarkdownToolbar() {
@@ -140,14 +215,14 @@ class EditorActivity : AppCompatActivity() {
             "H1" to { insertLine("# ") },
             "H2" to { insertLine("## ") },
             "H3" to { insertLine("### ") },
-            "• " to { insertLine("- ") },
-            "1." to { insertLine("1. ") },
-            "☑"  to { insertLine("- [ ] ") },
-            "—"  to { insertAtCursor("\n---\n") },
-            "🔗" to { insertWikiLink() },
-            "⊞"  to { showTableDialog() },
-            "🎙" to { startVoiceInput() },
-            "👁" to { togglePreview() }
+            "UL" to { insertLine("- ") },
+            "OL" to { insertLine("1. ") },
+            "[]" to { insertLine("- [ ] ") },
+            "---" to { insertAtCursor("\n---\n") },
+            "[[" to { insertWikiLink() },
+            "Table" to { showTableDialog() },
+            "Mic" to { startVoiceInput() },
+            "Eye" to { togglePreview() }
         )
 
         val toolbar = binding.markdownToolbar
@@ -186,7 +261,7 @@ class EditorActivity : AppCompatActivity() {
         val pos = et.selectionStart.coerceAtLeast(0)
         val text = "\n```\n\n```\n"
         et.text?.insert(pos, text)
-        et.setSelection(pos + 4) // cursor inside code block
+        et.setSelection(pos + 4)
     }
 
     private fun insertLine(prefix: String) {
@@ -223,16 +298,14 @@ class EditorActivity : AppCompatActivity() {
             if (rows == 0 || cols == 0) return
 
             gridContainer.removeAllViews()
-            gridContainer.columnCount = cols + 1 // +1 for row label column
+            gridContainer.columnCount = cols + 1
 
-            // Top-left empty cell
             gridContainer.addView(AndroidTextView(this).apply {
                 text = ""
                 textSize = 12f
                 setTextColor(ContextCompat.getColor(context, R.color.text_hint))
             })
 
-            // Column headers (editable)
             val headerLabels = mutableListOf<EditText>()
             for (c in 0 until cols) {
                 val headerEt = EditText(this).apply {
@@ -253,10 +326,8 @@ class EditorActivity : AppCompatActivity() {
                 gridContainer.addView(headerEt)
             }
 
-            // Data rows
             val dataEdits = mutableListOf<MutableList<EditText>>()
             for (r in 0 until rows) {
-                // Row number label
                 gridContainer.addView(AndroidTextView(this).apply {
                     text = "R${r + 1}"
                     textSize = 12f
@@ -286,15 +357,12 @@ class EditorActivity : AppCompatActivity() {
                 dataEdits.add(rowEdits)
             }
 
-            // Store references for the build button
             gridContainer.setTag(0, headerLabels)
             gridContainer.setTag(1, dataEdits)
         }
 
-        // Initial build
         rebuildGrid()
 
-        // Rebuild when rows/cols change
         etRows.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) = Unit
             override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) = rebuildGrid()
@@ -334,22 +402,15 @@ class EditorActivity : AppCompatActivity() {
 
         val sb = StringBuilder()
         sb.append("\n")
-
-        // Header row
         val headerLine = headers.map { it.ifBlank { "Col" } }.joinToString(" | ")
         sb.append("| $headerLine |\n")
-
-        // Separator
         val sepLine = headers.indices.joinToString(" | ") { "---" }
         sb.append("| $sepLine |\n")
-
-        // Data rows
         rows.forEach { row ->
             val cells = row + List(cols - row.size) { "" }
             val rowLine = cells.joinToString(" | ")
             sb.append("| $rowLine |\n")
         }
-
         sb.append("\n")
         return sb.toString()
     }
@@ -375,7 +436,18 @@ class EditorActivity : AppCompatActivity() {
 
     private fun togglePreview() {
         isPreviewMode = !isPreviewMode
-        if (isPreviewMode) {
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (isPreviewMode && isLandscape) {
+            // Split-pane mode
+            binding.etContent.visibility = View.VISIBLE
+            binding.tvPreview.visibility = View.VISIBLE
+            binding.editorRoot.orientation = LinearLayout.HORIZONTAL
+            binding.etContent.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            binding.tvPreview.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+            val content = binding.etContent.text.toString()
+            val rendered = MarkdownHelper.renderWikiLinks(content)
+            markwon.setMarkdown(binding.tvPreview, rendered)
+        } else if (isPreviewMode) {
             val content = binding.etContent.text.toString()
             val rendered = MarkdownHelper.renderWikiLinks(content)
             markwon.setMarkdown(binding.tvPreview, rendered)
@@ -384,6 +456,9 @@ class EditorActivity : AppCompatActivity() {
         } else {
             binding.etContent.visibility = View.VISIBLE
             binding.tvPreview.visibility = View.GONE
+            binding.editorRoot.orientation = LinearLayout.VERTICAL
+            binding.etContent.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+            binding.tvPreview.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
         }
     }
 
@@ -398,7 +473,7 @@ class EditorActivity : AppCompatActivity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now…")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak now...")
         }
         voiceLauncher.launch(intent)
     }
@@ -469,7 +544,7 @@ class EditorActivity : AppCompatActivity() {
         return (title + content).hashCode()
     }
 
-    // ── Tags ────────────────────────────────────────────────────────────────
+    // ── Tags ────────────────────────────────────────────────────────────
 
     private fun updateTagChips(tags: List<Tag>) {
         binding.chipGroupTags.removeAllViews()
@@ -531,7 +606,75 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ── Save ──────────────────────────────────────────────────────────────
+    // ── Reminder ──────────────────────────────────────────────────────
+
+    private fun showReminderDialog() {
+        val calendar = Calendar.getInstance()
+        if (reminderTime != null) calendar.timeInMillis = reminderTime!!
+
+        val dateListener = DatePickerDialog.OnDateSetListener { _, year, month, day ->
+            calendar.set(year, month, day)
+            TimePickerDialog(this, { _, hour, minute ->
+                calendar.set(Calendar.HOUR_OF_DAY, hour)
+                calendar.set(Calendar.MINUTE, minute)
+                calendar.set(Calendar.SECOND, 0)
+                setReminder(calendar.timeInMillis)
+            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false).show()
+        }
+
+        DatePickerDialog(this, dateListener,
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun setReminder(time: Long) {
+        reminderTime = time
+        Snackbar.make(binding.root, "Reminder set", Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun removeReminder() {
+        reminderTime = null
+        if (currentNoteId > 0) {
+            ReminderHelper.cancelReminder(this, currentNoteId)
+        }
+        Snackbar.make(binding.root, "Reminder removed", Snackbar.LENGTH_SHORT).show()
+    }
+
+    // ── Share ──────────────────────────────────────────────────────────
+
+    private fun shareNote() {
+        val title = binding.etTitle.text.toString().trim()
+        val content = binding.etContent.text.toString().trim()
+        if (title.isBlank() && content.isBlank()) return
+
+        val shareText = if (title.isNotBlank()) "# $title\n\n$content" else content
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        startActivity(Intent.createChooser(intent, "Share Note"))
+    }
+
+    // ── Export single note ────────────────────────────────────────────
+
+    private fun exportNote() {
+        lifecycleScope.launch {
+            try {
+                val title = binding.etTitle.text.toString().ifBlank { "Untitled" }
+                val content = binding.etContent.text.toString()
+                val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS
+                )
+                val file = File(downloadsDir, "$title.md")
+                FileOutputStream(file).use { it.write(content.toByteArray()) }
+                Snackbar.make(binding.root, "Exported to ${file.absolutePath}", Snackbar.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Snackbar.make(binding.root, "Export failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────
 
     private fun performSave(silent: Boolean = false) {
         val title   = binding.etTitle.text.toString().trim()
@@ -541,18 +684,26 @@ class EditorActivity : AppCompatActivity() {
         val currentHash = computeHash(title, content)
         if (silent && currentHash == lastSavedHash) return
 
+        // Encrypt content if locked
+        val storedContent = if (isLocked) CryptoHelper.encrypt(content) else content
+
         val note = existingNote?.copy(
-            title = title, content = content, color = selectedColor,
-            isPinned = isPinned, isLocked = isLocked,
+            title = title, content = storedContent, color = selectedColor,
+            isPinned = isPinned, isLocked = isLocked, isFavorite = isFavorite,
+            reminderTime = reminderTime,
             updatedAt = System.currentTimeMillis()
-        ) ?: Note(title = title, content = content, color = selectedColor,
-            isPinned = isPinned, isLocked = isLocked)
+        ) ?: Note(title = title, content = storedContent, color = selectedColor,
+            isPinned = isPinned, isLocked = isLocked, isFavorite = isFavorite,
+            reminderTime = reminderTime)
 
         lifecycleScope.launch {
             if (existingNote != null) {
                 vm.saveVersion(existingNote!!)
                 vm.update(note)
                 vm.setTagsForNote(note.id, selectedTagIds)
+                // Schedule/cancel reminder
+                reminderTime?.let { ReminderHelper.scheduleReminder(this@EditorActivity, note.copy(reminderTime = it)) }
+                    ?: ReminderHelper.cancelReminder(this@EditorActivity, note.id)
                 lastSavedHash = currentHash
             } else {
                 val id = KitabuDatabase
@@ -560,36 +711,50 @@ class EditorActivity : AppCompatActivity() {
                 currentNoteId = id.toInt()
                 existingNote  = note.copy(id = currentNoteId)
                 vm.setTagsForNote(currentNoteId, selectedTagIds)
+                reminderTime?.let { ReminderHelper.scheduleReminder(this@EditorActivity, note.copy(reminderTime = it)) }
                 lastSavedHash = currentHash
             }
         }
         if (!silent) finish()
     }
 
-    // ── Options menu ──────────────────────────────────────────────────────
+    // ── Options menu ──────────────────────────────────────────────────
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_editor, menu)
         menu.findItem(R.id.action_pin)?.setIcon(if (isPinned) R.drawable.ic_pin_filled else R.drawable.ic_pin_outline)
+        menu.findItem(R.id.action_favorite)?.setIcon(
+            if (isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+        )
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        android.R.id.home  -> { performSave(); true }
-        R.id.action_pin    -> { isPinned = !isPinned; invalidateOptionsMenu(); true }
-        R.id.action_lock   -> { isLocked = !isLocked
-            Snackbar.make(binding.root, if (isLocked) "Note locked 🔒" else "Note unlocked 🔓", Snackbar.LENGTH_SHORT).show()
+        android.R.id.home     -> { performSave(); true }
+        R.id.action_pin       -> { isPinned = !isPinned; invalidateOptionsMenu(); true }
+        R.id.action_lock      -> { isLocked = !isLocked
+            Snackbar.make(binding.root, if (isLocked) "Note locked" else "Note unlocked", Snackbar.LENGTH_SHORT).show()
             true }
-        R.id.action_history -> {
+        R.id.action_history   -> {
             startActivity(Intent(this, VersionHistoryActivity::class.java)
                 .putExtra(VersionHistoryActivity.EXTRA_NOTE_ID, currentNoteId))
             true }
-        R.id.action_ai     -> {
+        R.id.action_ai        -> {
             startActivity(Intent(this, AiAssistantActivity::class.java)
                 .putExtra(AiAssistantActivity.EXTRA_NOTE_CONTENT, binding.etContent.text.toString()))
             true }
-        R.id.action_save   -> { performSave(); true }
-        else               -> super.onOptionsItemSelected(item)
+        R.id.action_save      -> { performSave(); true }
+        R.id.action_share     -> { shareNote(); true }
+        R.id.action_reminder  -> { showReminderDialog(); true }
+        R.id.action_favorite  -> {
+            isFavorite = !isFavorite
+            invalidateOptionsMenu()
+            Snackbar.make(binding.root,
+                if (isFavorite) "Added to favorites" else "Removed from favorites",
+                Snackbar.LENGTH_SHORT).show()
+            true }
+        R.id.action_export    -> { exportNote(); true }
+        else                  -> super.onOptionsItemSelected(item)
     }
 
     override fun onBackPressed() { performSave() }

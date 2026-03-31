@@ -15,6 +15,8 @@ class NoteRepository(
     val dailyNotes: Flow<List<NoteWithTags>> = noteDao.getDailyNotesWithTags()
     val archivedNotes: Flow<List<NoteWithTags>> = noteDao.getArchivedNotesWithTags()
     val notesWithReminders: Flow<List<Note>> = noteDao.getNotesWithReminders()
+    val trashedNotes: Flow<List<NoteWithTags>> = noteDao.getTrashedNotesWithTags()
+    val favoriteNotes: Flow<List<NoteWithTags>> = noteDao.getFavoriteNotesWithTags()
 
     fun searchNotes(q: String): Flow<List<NoteWithTags>> = noteDao.searchNotesWithTags(q)
     fun getNotesByTag(tagId: Int): Flow<List<NoteWithTags>> = noteDao.getNotesByTagWithTags(tagId)
@@ -35,6 +37,22 @@ class NoteRepository(
     suspend fun toggleArchive(note: Note) {
         if (note.isArchived) unarchive(note) else archive(note)
     }
+
+    // --- Trash ---
+
+    suspend fun trash(note: Note) = noteDao.updateNote(note.copy(isTrashed = true, isPinned = false, trashedAt = System.currentTimeMillis()))
+    suspend fun restoreFromTrash(note: Note) = noteDao.updateNote(note.copy(isTrashed = false, trashedAt = null))
+    suspend fun toggleTrash(note: Note) {
+        if (note.isTrashed) restoreFromTrash(note) else trash(note)
+    }
+    suspend fun emptyTrash(cutoffTime: Long = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) {
+        noteDao.purgeExpiredTrash(cutoffTime)
+    }
+    suspend fun getTrashedCount() = noteDao.getTrashedCount()
+
+    // --- Favorites ---
+
+    suspend fun toggleFavorite(note: Note) = noteDao.updateNote(note.copy(isFavorite = !note.isFavorite))
 
     suspend fun getOrCreateDailyNote(): Note {
         val today = LocalDate.now().toString()
@@ -97,14 +115,59 @@ class NoteRepository(
     // --- Export / Import ---
 
     suspend fun exportAllAsJson(): String {
-        val notes = mutableListOf<Note>()
-        var offset = 0
-        val pageSize = 100
-        while (true) {
-            // Room Flow collect is not available here, so we use individual queries
-            // In practice you'd add a non-flow query to NoteDao for bulk export
-            break // simplified
-        }
-        return "[]"
+        val notes = noteDao.getAllNotesRaw()
+        val tags = noteDao.getAllTagsRaw()
+        val noteTags = noteDao.getAllNoteTagsRaw()
+        val versions = noteDao.getAllVersionsRaw()
+        val templates = noteDao.getAllTemplatesRaw()
+
+        val json = org.json.JSONObject()
+        json.put("version", 4)
+        json.put("exportedAt", System.currentTimeMillis())
+        json.put("notes", org.json.JSONArray().apply {
+            notes.forEach { n ->
+                put(org.json.JSONObject().apply {
+                    put("id", n.id); put("title", n.title); put("content", n.content)
+                    put("color", n.color); put("isPinned", n.isPinned); put("isLocked", n.isLocked)
+                    put("isArchived", n.isArchived); put("isDaily", n.isDaily); put("dailyDate", n.dailyDate)
+                    put("templateId", n.templateId); put("reminderTime", n.reminderTime)
+                    put("isTrashed", n.isTrashed); put("trashedAt", n.trashedAt)
+                    put("isFavorite", n.isFavorite)
+                    put("createdAt", n.createdAt); put("updatedAt", n.updatedAt)
+                })
+            }
+        })
+        json.put("tags", org.json.JSONArray().apply {
+            tags.forEach { t ->
+                put(org.json.JSONObject().apply {
+                    put("id", t.id); put("name", t.name); put("color", t.color)
+                    put("createdAt", t.createdAt)
+                })
+            }
+        })
+        json.put("noteTags", org.json.JSONArray().apply {
+            noteTags.forEach { nt ->
+                put(org.json.JSONObject().apply {
+                    put("noteId", nt.noteId); put("tagId", nt.tagId)
+                })
+            }
+        })
+        json.put("versions", org.json.JSONArray().apply {
+            versions.forEach { v ->
+                put(org.json.JSONObject().apply {
+                    put("id", v.id); put("noteId", v.noteId); put("title", v.title)
+                    put("content", v.content); put("savedAt", v.savedAt)
+                })
+            }
+        })
+        json.put("templates", org.json.JSONArray().apply {
+            templates.forEach { t ->
+                put(org.json.JSONObject().apply {
+                    put("id", t.id); put("name", t.name); put("content", t.content)
+                    put("icon", t.icon); put("isBuiltIn", t.isBuiltIn); put("createdAt", t.createdAt)
+                })
+            }
+        })
+        return json.toString(2)
     }
 }

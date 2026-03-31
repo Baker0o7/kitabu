@@ -67,8 +67,13 @@ class AiAssistantActivity : AppCompatActivity() {
     // ── Core ask ─────────────────────────────────────────────────────────────
 
     private fun ask(prompt: String) {
-        val apiKey = getSharedPreferences("kitabu_prefs", MODE_PRIVATE)
-            .getString(PREF_KEY, "").orEmpty().trim()
+        val apiKey = try {
+            com.kitabu.app.util.CryptoHelper.getEncryptedPrefs(this)
+                .getString(PREF_KEY, "").orEmpty().trim()
+        } catch (e: Exception) {
+            getSharedPreferences("kitabu_prefs", MODE_PRIVATE)
+                .getString(PREF_KEY, "").orEmpty().trim()
+        }
 
         appendBubble(sender = "You", text = prompt, isUser = true)
         binding.progressBar.visibility = View.VISIBLE

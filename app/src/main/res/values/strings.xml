@@ -3,4 +3,16 @@
     <string name="app_name">kitabu</string>
     <string name="nav_open">Open navigation drawer</string>
     <string name="nav_close">Close navigation drawer</string>
+    <string name="widget_recent_desc">Show your recent notes</string>
+    <string name="widget_quick_desc">Quick create a new note</string>
+    <string name="nav_trash">Trash</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="trash_empty">Trash is empty</string>
+    <string name="trash_empty_subtitle">Deleted notes appear here for 30 days</string>
+    <string name="export_success">Exported successfully</string>
+    <string name="import_success">Import completed</string>
+    <string name="share_note">Share Note</string>
+    <string name="reminder_set">Reminder set</string>
+    <string name="reminder_removed">Reminder removed</string>
+    <string name="backlinks_panel">Backlinks</string>
 </resources>

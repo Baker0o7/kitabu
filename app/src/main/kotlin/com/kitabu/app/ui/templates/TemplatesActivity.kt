@@ -18,7 +18,7 @@ import com.kitabu.app.databinding.ItemTemplateBinding
 import com.kitabu.app.ui.editor.EditorActivity
 import com.kitabu.app.ui.notes.NoteViewModel
 import com.kitabu.app.util.ThemeManager
-import kotlinx.coroutines.GlobalScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 class TemplatesActivity : AppCompatActivity() {
@@ -47,7 +47,7 @@ class TemplatesActivity : AppCompatActivity() {
                     MaterialAlertDialogBuilder(this, R.style.KitabuDialog)
                         .setTitle("Delete template \"${template.name}\"?")
                         .setPositiveButton("Delete") { _, _ ->
-                            GlobalScope.launch { vm.templateRepo.delete(template) }
+                            lifecycleScope.launch { vm.templateRepo.delete(template) }
                             Snackbar.make(binding.root, "Template deleted", Snackbar.LENGTH_SHORT).show()
                         }
                         .setNegativeButton("Cancel", null).show()
@@ -90,7 +90,7 @@ class TemplatesActivity : AppCompatActivity() {
                 val name = nameEt.text.toString().trim()
                 val content = contentEt.text.toString()
                 if (name.isNotBlank()) {
-                    GlobalScope.launch {
+                    lifecycleScope.launch {
                         vm.templateRepo.insert(Template(
                             name = name,
                             content = content,

@@ -11,4 +11,8 @@
         android:icon="@drawable/ic_history" app:showAsAction="never"/>
     <item android:id="@+id/action_save"    android:title="Save"
         android:icon="@drawable/ic_check"   app:showAsAction="never"/>
+    <item android:id="@+id/action_favorite" android:title="Favorite" android:icon="@drawable/ic_pin_outline" app:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_reminder" android:title="Reminder" android:icon="@drawable/ic_calendar" app:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_share" android:title="Share" android:icon="@drawable/ic_search" app:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_export" android:title="Export note" app:showAsAction="never"/>
 </menu>

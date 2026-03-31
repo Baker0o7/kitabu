@@ -17,6 +17,9 @@ data class Note(
     val dailyDate: String? = null,   // "2026-03-18"
     val templateId: Int? = null,
     val reminderTime: Long? = null,  // epoch millis for scheduled reminder
+    val isTrashed: Boolean = false,        // soft delete
+    val trashedAt: Long? = null,           // when trashed (for 30-day auto-purge)
+    val isFavorite: Boolean = false,       // bookmark/favorite
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

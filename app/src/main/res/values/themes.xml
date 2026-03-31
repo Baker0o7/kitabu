@@ -219,4 +219,66 @@
         <item name="itemIconTint">@color/noir_accent</item>
     </style>
 
+    <!-- Light Theme Base -->
+    <style name="Theme.Kitabu.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryVariant">@color/accent</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="android:statusBarColor">#F5F5F5</item>
+        <item name="android:navigationBarColor">#F5F5F5</item>
+        <item name="android:windowBackground">#FAFAFA</item>
+        <item name="android:colorBackground">#FAFAFA</item>
+        <item name="android:textColorPrimary">#1A1A2E</item>
+        <item name="android:textColorSecondary">#555566</item>
+    </style>
+
+    <!-- Light theme overlays for each theme (they inherit from Light base) -->
+    <style name="Theme.Kitabu.Noir.Light">
+        <item name="colorPrimary">#7B5EA7</item>
+        <item name="colorAccent">#7B5EA7</item>
+        <item name="android:windowBackground">#FAFAFA</item>
+    </style>
+    <style name="Theme.Kitabu.Midnight.Light">
+        <item name="colorPrimary">#2196F3</item>
+        <item name="colorAccent">#2196F3</item>
+        <item name="android:windowBackground">#F5F7FA</item>
+    </style>
+    <style name="Theme.Kitabu.Forest.Light">
+        <item name="colorPrimary">#2E7D32</item>
+        <item name="colorAccent">#2E7D32</item>
+        <item name="android:windowBackground">#F1F8F1</item>
+    </style>
+    <style name="Theme.Kitabu.Crimson.Light">
+        <item name="colorPrimary">#C62828</item>
+        <item name="colorAccent">#C62828</item>
+        <item name="android:windowBackground">#FAF1F1</item>
+    </style>
+    <style name="Theme.Kitabu.Dusk.Light">
+        <item name="colorPrimary">#E65100</item>
+        <item name="colorAccent">#E65100</item>
+        <item name="android:windowBackground">#FAF5EE</item>
+    </style>
+    <style name="Theme.Kitabu.Nord.Light">
+        <item name="colorPrimary">#5E81AC</item>
+        <item name="colorAccent">#5E81AC</item>
+        <item name="android:windowBackground">#ECEFF4</item>
+    </style>
+    <style name="Theme.Kitabu.Rose.Light">
+        <item name="colorPrimary">#AD1457</item>
+        <item name="colorAccent">#AD1457</item>
+        <item name="android:windowBackground">#FAF0F5</item>
+    </style>
+    <style name="Theme.Kitabu.Slate.Light">
+        <item name="colorPrimary">#00838F</item>
+        <item name="colorAccent">#00838F</item>
+        <item name="android:windowBackground">#F0F4F5</item>
+    </style>
+    <style name="Theme.Kitabu.Aurora.Light">
+        <item name="colorPrimary">#7C4DFF</item>
+        <item name="colorAccent">#7C4DFF</item>
+        <item name="android:windowBackground">#F3F0FA</item>
+    </style>
+
 </resources>

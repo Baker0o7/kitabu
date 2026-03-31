@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Note::class, Tag::class, NoteTag::class, NoteVersion::class, Template::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class KitabuDatabase : RoomDatabase() {
@@ -82,10 +82,23 @@ abstract class KitabuDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // v3.0: Trash system
+                db.execSQL("ALTER TABLE notes ADD COLUMN isTrashed INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN trashedAt INTEGER")
+                // v3.0: Favorites system
+                db.execSQL("ALTER TABLE notes ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+                // Indexes
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_notes_trashed ON notes(isTrashed)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_notes_favorite ON notes(isFavorite)")
+            }
+        }
+
         fun getDatabase(context: Context): KitabuDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, KitabuDatabase::class.java, "kitabu_db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                     .also { INSTANCE = it }

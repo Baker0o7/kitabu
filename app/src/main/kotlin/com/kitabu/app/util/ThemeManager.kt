@@ -89,9 +89,32 @@ object ThemeManager {
             .edit().putString(PREF_THEME, theme.id).apply()
     }
 
+    // ── Light/Dark Mode Toggle ──
+    private const val PREF_LIGHT_MODE = "app_light_mode"
+
+    fun isLightMode(context: Context): Boolean {
+        return context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
+            .getBoolean(PREF_LIGHT_MODE, false)
+    }
+
+    fun setLightMode(context: Context, light: Boolean) {
+        context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_LIGHT_MODE, light).apply()
+    }
+
     /** Call this at the top of every Activity's onCreate(), before setContentView(). */
     fun apply(context: Context) {
         context as android.app.Activity
-        context.setTheme(get(context).styleRes)
+        val theme = get(context)
+        val lightSuffix = if (isLightMode(context)) ".Light" else ""
+        try {
+            val styleId = context.resources.getIdentifier(
+                "Theme.Kitabu.${theme.id}$lightSuffix", "style", context.packageName
+            )
+            if (styleId != 0) context.setTheme(styleId)
+            else context.setTheme(theme.styleRes)
+        } catch (e: Exception) {
+            context.setTheme(theme.styleRes)
+        }
     }
 }

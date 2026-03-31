@@ -4,8 +4,13 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.*
-import kotlin.random.Random
 
 class GraphView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
@@ -55,41 +60,55 @@ class GraphView @JvmOverloads constructor(
         }
     })
 
+    private val scope = MainScope()
+    private var layoutJob: Job? = null
+
     fun setData(newNodes: List<Node>, newEdges: List<Edge>) {
         nodes.clear(); edges.clear()
         nodes.addAll(newNodes); edges.addAll(newEdges)
-        post { layout() }
+        layoutJob?.cancel()
+        layoutJob = scope.launch {
+            val w = width.toFloat(); val h = height.toFloat()
+            val layoutNodes = withContext(Dispatchers.Default) {
+                val localNodes = nodes.map { it.copy() }.toMutableList()
+                layoutNodesInternal(localNodes, w, h)
+                localNodes
+            }
+            layoutNodes.forEach { src ->
+                nodes.firstOrNull { it.id == src.id }?.let { dest ->
+                    dest.x = src.x; dest.y = src.y
+                }
+            }
+            invalidate()
+        }
     }
 
-    private fun layout() {
-        if (nodes.isEmpty()) return
-        val rnd = Random(42)
-        val cx = width / 2f
-        val cy = height / 2f
-        val radius = minOf(width, height) * 0.35f
-        // Initial circular layout for better initial positioning
-        nodes.forEachIndexed { i, it ->
-            val angle = (2.0 * Math.PI * i / nodes.size)
+    private fun layoutNodesInternal(localNodes: MutableList<Node>, w: Float, h: Float) {
+        if (localNodes.isEmpty()) return
+        val rnd = java.util.Random(42)
+        val cx = w / 2f
+        val cy = h / 2f
+        val radius = minOf(w, h) * 0.35f
+        localNodes.forEachIndexed { i, it ->
+            val angle = (2.0 * Math.PI * i / localNodes.size)
             it.x = cx + (radius * cos(angle)).toFloat()
             it.y = cy + (radius * sin(angle)).toFloat()
         }
-        // Run more iterations for larger graphs
-        val iterations = maxOf(150, nodes.size * 10)
-        repeat(iterations.coerceAtMost(300)) { tick() }
-        invalidate()
+        val iterations = maxOf(150, localNodes.size * 10)
+        repeat(iterations.coerceAtMost(300)) {
+            tickInternal(localNodes, w, h)
+        }
     }
 
-    private fun tick() {
-        val map = nodes.associateBy { it.id }
-        // Repulsion between all nodes (O(n^2))
-        nodes.forEach { a -> nodes.forEach { b ->
+    private fun tickInternal(localNodes: MutableList<Node>, w: Float, h: Float) {
+        val map = localNodes.associateBy { it.id }
+        localNodes.forEach { a -> localNodes.forEach { b ->
             if (a.id == b.id) return@forEach
             val dx = a.x - b.x; val dy = a.y - b.y
             val d = hypot(dx.toDouble(), dy.toDouble()).toFloat().coerceAtLeast(1f)
             val f = 8000f / (d * d)
             a.x += dx / d * f; a.y += dy / d * f
         }}
-        // Attraction along edges
         edges.forEach { e ->
             val a = map[e.fromId] ?: return@forEach; val b = map[e.toId] ?: return@forEach
             val dx = b.x - a.x; val dy = b.y - a.y
@@ -98,9 +117,8 @@ class GraphView @JvmOverloads constructor(
             val f = (d - idealDist) * 0.008f
             a.x += dx * f; a.y += dy * f; b.x -= dx * f; b.y -= dy * f
         }
-        // Gravity towards center
-        val cx = width / 2f; val cy = height / 2f
-        nodes.forEach { it.x += (cx - it.x) * 0.01f; it.y += (cy - it.y) * 0.01f }
+        val cx = w / 2f; val cy = h / 2f
+        localNodes.forEach { it.x += (cx - it.x) * 0.01f; it.y += (cy - it.y) * 0.01f }
     }
 
     override fun onDraw(canvas: Canvas) {

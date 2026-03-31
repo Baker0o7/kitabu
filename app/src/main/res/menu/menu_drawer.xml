@@ -22,6 +22,10 @@
             android:icon="@drawable/ic_palette"/>
     </group>
     <group>
+        <item android:id="@+id/nav_trash"     android:title="@string/nav_trash"
+            android:icon="@drawable/ic_delete"/>
+        <item android:id="@+id/nav_favorites"  android:title="@string/nav_favorites"
+            android:icon="@drawable/ic_notes"/>
         <item android:id="@+id/nav_settings"  android:title="Settings"
             android:icon="@drawable/ic_settings"/>
     </group>

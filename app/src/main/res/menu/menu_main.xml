@@ -15,4 +15,6 @@
             <item android:id="@+id/sort_words"   android:title="Word count"/>
         </menu>
     </item>
+    <item android:id="@+id/action_export_all" android:title="Export all notes" app:showAsAction="never"/>
+    <item android:id="@+id/action_import" android:title="Import notes" app:showAsAction="never"/>
 </menu>
