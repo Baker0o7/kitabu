@@ -12,7 +12,7 @@ object BiometricHelper {
         return bm.canAuthenticate(
             BiometricManager.Authenticators.BIOMETRIC_STRONG or
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        ) == BiometricManager.BiOMETRIC_SUCCESS
+        ) == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     fun authenticate(

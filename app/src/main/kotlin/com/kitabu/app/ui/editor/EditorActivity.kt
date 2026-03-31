@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.text.*
 import android.view.*
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -151,7 +152,7 @@ class EditorActivity : AppCompatActivity() {
                 text = label
                 textSize = 13f
                 setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                layoutParams = LinearLayout.LayoutParams(
+                layoutParams = android.widget.LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 ).also { lp -> lp.marginEnd = 2.dp.toInt() }

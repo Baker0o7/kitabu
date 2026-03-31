@@ -29,7 +29,8 @@ class TagManagerActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Tags"
 
-        val adapter = TagAdapter(
+        lateinit var adapter: TagAdapter
+        adapter = TagAdapter(
             onDelete = { tag -> confirmDeleteTag(tag, adapter) },
             onRename = { tag -> showRenameDialog(tag) }
         )
