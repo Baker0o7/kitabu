@@ -155,7 +155,7 @@
             app:boxStrokeWidth="0dp"
             app:boxStrokeWidthFocused="1dp"
             app:boxStrokeColor="@color/accent"
-            android:hintTextColor="@color/text_hint"
+            app:hintTextColor="@color/text_hint"
             app:hintEnabled="false">
 
             <com.google.android.material.textfield.TextInputEditText
