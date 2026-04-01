@@ -281,6 +281,13 @@ class EditorActivity : AppCompatActivity() {
 
     // ── Table insertion ────────────────────────────────────────────────
 
+    // Holds grid cell references so we can read user input on "Insert Table"
+    private data class TableGridData(
+        val headers: List<EditText>,
+        val rows: List<List<EditText>>
+    )
+    private var currentTableGridData: TableGridData? = null
+
     private fun showTableDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_table_input, null)
         val etRows    = dialogView.findViewById<EditText>(R.id.etTableRows)
@@ -292,21 +299,26 @@ class EditorActivity : AppCompatActivity() {
         etCols.setText("3")
 
         fun rebuildGrid() {
-            val rows = etRows.text.toString().toIntOrNull()?.coerceIn(1, 20) ?: 0
-            val cols = etCols.text.toString().toIntOrNull()?.coerceIn(1, 8)  ?: 0
-            if (rows == 0 || cols == 0) return
+            val rowCount = etRows.text.toString().toIntOrNull()?.coerceIn(1, 20) ?: 0
+            val colCount = etCols.text.toString().toIntOrNull()?.coerceIn(1, 8)  ?: 0
+            if (rowCount == 0 || colCount == 0) {
+                currentTableGridData = null
+                return
+            }
 
             gridContainer.removeAllViews()
-            gridContainer.columnCount = cols + 1
+            gridContainer.columnCount = colCount + 1
 
+            // Corner spacer
             gridContainer.addView(AndroidTextView(this).apply {
                 text = ""
                 textSize = 12f
                 setTextColor(ContextCompat.getColor(context, R.color.text_hint))
             })
 
-            val headerLabels = mutableListOf<EditText>()
-            for (c in 0 until cols) {
+            // Header row
+            val headerEdits = mutableListOf<EditText>()
+            for (c in 0 until colCount) {
                 val headerEt = EditText(this).apply {
                     hint = "Col ${c + 1}"
                     textSize = 13f
@@ -314,29 +326,35 @@ class EditorActivity : AppCompatActivity() {
                     setHintTextColor(ContextCompat.getColor(context, R.color.text_hint))
                     setBackgroundColor(0x00000000)
                     setPadding(6, 8, 6, 8)
-                    setTextColor(android.graphics.Color.WHITE)
                     inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
                     layoutParams = GridLayout.LayoutParams().apply {
                         width = 0
+                        height = GridLayout.LayoutParams.WRAP_CONTENT
                         columnSpec = GridLayout.spec(c + 1, 1f)
+                        rowSpec = GridLayout.spec(0)
                     }
                 }
-                headerLabels.add(headerEt)
+                headerEdits.add(headerEt)
                 gridContainer.addView(headerEt)
             }
 
-            val dataEdits = mutableListOf<MutableList<EditText>>()
-            for (r in 0 until rows) {
+            // Data rows
+            val allRowEdits = mutableListOf<MutableList<EditText>>()
+            for (r in 0 until rowCount) {
+                // Row label
                 gridContainer.addView(AndroidTextView(this).apply {
                     text = "R${r + 1}"
                     textSize = 12f
                     setTextColor(ContextCompat.getColor(context, R.color.text_hint))
                     gravity = android.view.Gravity.CENTER
                     setPadding(4, 8, 8, 8)
+                    layoutParams = GridLayout.LayoutParams().apply {
+                        rowSpec = GridLayout.spec(r + 1)
+                    }
                 })
 
                 val rowEdits = mutableListOf<EditText>()
-                for (c in 0 until cols) {
+                for (c in 0 until colCount) {
                     val cellEt = EditText(this).apply {
                         hint = "..."
                         textSize = 13f
@@ -347,17 +365,19 @@ class EditorActivity : AppCompatActivity() {
                         inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
                         layoutParams = GridLayout.LayoutParams().apply {
                             width = 0
+                            height = GridLayout.LayoutParams.WRAP_CONTENT
                             columnSpec = GridLayout.spec(c + 1, 1f)
+                            rowSpec = GridLayout.spec(r + 1)
                         }
                     }
                     rowEdits.add(cellEt)
                     gridContainer.addView(cellEt)
                 }
-                dataEdits.add(rowEdits)
+                allRowEdits.add(rowEdits)
             }
 
-            gridContainer.setTag(0, headerLabels)
-            gridContainer.setTag(1, dataEdits)
+            // Store references directly in a class field — avoids View.setTag(int, Object) issues
+            currentTableGridData = TableGridData(headerEdits, allRowEdits)
         }
 
         rebuildGrid()
@@ -380,15 +400,21 @@ class EditorActivity : AppCompatActivity() {
             .create()
 
         btnBuild.setOnClickListener {
-            @Suppress("UNCHECKED_CAST")
-            val headers = (gridContainer.getTag(0) as? List<EditText>)?.map { it.text.toString().trim() } ?: emptyList()
-            @Suppress("UNCHECKED_CAST")
-            val allRows = (gridContainer.getTag(1) as? List<List<EditText>>)?.map { row ->
+            val data = currentTableGridData
+            if (data == null) {
+                dialog.dismiss()
+                return@setOnClickListener
+            }
+            val headers = data.headers.map { it.text.toString().trim() }
+            val allRows = data.rows.map { row ->
                 row.map { it.text.toString().trim() }
-            } ?: emptyList()
+            }
 
             val tableMd = buildMarkdownTable(headers, allRows)
-            insertAtCursor(tableMd)
+            if (tableMd.isNotBlank()) {
+                insertAtCursor(tableMd)
+            }
+            currentTableGridData = null
             dialog.dismiss()
         }
 
