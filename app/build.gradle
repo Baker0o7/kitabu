@@ -9,6 +9,15 @@ android {
     namespace 'com.kitabu.app'
     compileSdk 35
 
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("KEYSTORE_PATH") ?: "kitabu-release.jks")
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "kitabu2025"
+            keyAlias System.getenv("KEY_ALIAS") ?: "kitabu"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "kitabu2025"
+        }
+    }
+
     defaultConfig {
         applicationId "com.kitabu.app"
         minSdk 26
@@ -22,6 +31,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
