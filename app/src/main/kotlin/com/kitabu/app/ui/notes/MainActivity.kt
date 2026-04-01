@@ -26,6 +26,7 @@ import com.kitabu.app.ui.editor.EditorActivity
 import com.kitabu.app.ui.graph.GraphActivity
 import com.kitabu.app.ui.settings.SettingsActivity
 import com.kitabu.app.ui.theme.ThemePickerActivity
+import com.kitabu.app.ui.onboarding.OnboardingActivity
 import com.kitabu.app.ui.tags.TagManagerActivity
 import com.kitabu.app.ui.templates.TemplatesActivity
 import com.kitabu.app.util.BiometricHelper
