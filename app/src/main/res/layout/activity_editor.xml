@@ -78,10 +78,16 @@
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:layout_marginHorizontal="20dp" android:background="@color/divider"/>
 
+    <View android:id="@+id/previewDivider"
+        android:layout_width="match_parent" android:layout_height="1dp"
+        android:layout_marginHorizontal="20dp" android:background="@color/divider"
+        android:visibility="gone"/>
+
     <!-- Preview overlay -->
     <ScrollView android:id="@+id/scrollPreview"
         android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:visibility="gone">
+        android:visibility="gone"
+        android:background="@color/bg_surface">
         <TextView android:id="@+id/tvPreview"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:paddingHorizontal="20dp" android:paddingVertical="12dp"

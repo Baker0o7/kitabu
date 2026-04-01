@@ -56,7 +56,9 @@ class EditorActivity : AppCompatActivity() {
     private var isLocked = false
     private var isFavorite = false
     private var isPreviewMode = false
+    private var isLivePreview = false
     private var currentNoteId = -1
+    private var livePreviewJob: Job? = null
     private var selectedTagIds = mutableListOf<Int>()
     private var lastSavedHash = 0
     private var reminderTime: Long? = null
@@ -461,30 +463,11 @@ class EditorActivity : AppCompatActivity() {
 
     private fun togglePreview() {
         isPreviewMode = !isPreviewMode
-        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        if (isPreviewMode && isLandscape) {
-            // Split-pane mode
-            binding.etContent.visibility = View.VISIBLE
-            binding.tvPreview.visibility = View.VISIBLE
-            binding.editorRoot.orientation = LinearLayout.HORIZONTAL
-            binding.etContent.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-            binding.tvPreview.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-            val content = binding.etContent.text.toString()
-            val rendered = MarkdownHelper.renderWikiLinks(content)
-            markwon.setMarkdown(binding.tvPreview, rendered)
-        } else if (isPreviewMode) {
-            val content = binding.etContent.text.toString()
-            val rendered = MarkdownHelper.renderWikiLinks(content)
-            markwon.setMarkdown(binding.tvPreview, rendered)
-            binding.etContent.visibility = View.GONE
-            binding.tvPreview.visibility = View.VISIBLE
-        } else {
-            binding.etContent.visibility = View.VISIBLE
-            binding.tvPreview.visibility = View.GONE
-            binding.editorRoot.orientation = LinearLayout.VERTICAL
-            binding.etContent.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
-            binding.tvPreview.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        if (isPreviewMode) {
+            // Full preview mode — hide editor, show rendered content
+            updateLivePreview()
         }
+        updatePreviewVisibility()
     }
 
     // ── Voice ─────────────────────────────────────────────────────────────
@@ -536,7 +519,7 @@ class EditorActivity : AppCompatActivity() {
         binding.editorRoot.setBackgroundColor(color); selectedColor = color
     }
 
-    // ── Word count / autosave ─────────────────────────────────────────────
+    // ── Word count / autosave / live preview ────────────────────────────────
 
     private fun setupWordCount() {
         binding.etContent.addTextChangedListener(object : TextWatcher {
@@ -545,8 +528,78 @@ class EditorActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val stats = s.toString().textStats()
                 supportActionBar?.subtitle = stats.label
+                // Auto-detect table syntax and enable live preview
+                if (!isLivePreview && s.toString().contains("| --- |")) {
+                    enableLivePreview()
+                }
+                // Update live preview if active
+                if (isLivePreview) {
+                    scheduleLivePreviewUpdate(s.toString())
+                }
             }
         })
+    }
+
+    private fun enableLivePreview() {
+        isLivePreview = true
+        updatePreviewVisibility()
+        updateLivePreview()
+    }
+
+    private fun disableLivePreview() {
+        isLivePreview = false
+        livePreviewJob?.cancel()
+        updatePreviewVisibility()
+    }
+
+    private fun scheduleLivePreviewUpdate(content: String) {
+        livePreviewJob?.cancel()
+        livePreviewJob = lifecycleScope.launch {
+            delay(300)
+            updateLivePreview()
+        }
+    }
+
+    private fun updateLivePreview() {
+        val content = binding.etContent.text.toString()
+        val rendered = MarkdownHelper.renderWikiLinks(content)
+        markwon.setMarkdown(binding.tvPreview, rendered)
+    }
+
+    private fun updatePreviewVisibility() {
+        val showPreview = isPreviewMode || isLivePreview
+        if (showPreview) {
+            binding.scrollPreview.visibility = View.VISIBLE
+            binding.tvPreview.visibility = View.VISIBLE
+            if (isPreviewMode) {
+                // Full preview: hide editor
+                binding.etContent.visibility = View.GONE
+                binding.previewDivider.visibility = View.GONE
+                binding.scrollPreview.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+            } else {
+                // Live preview: show both, split vertically
+                binding.etContent.visibility = View.VISIBLE
+                binding.previewDivider.visibility = View.VISIBLE
+                binding.editorRoot.orientation = LinearLayout.VERTICAL
+                binding.etContent.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+                binding.scrollPreview.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+            }
+        } else {
+            binding.scrollPreview.visibility = View.GONE
+            binding.tvPreview.visibility = View.GONE
+            binding.previewDivider.visibility = View.GONE
+            binding.etContent.visibility = View.VISIBLE
+            binding.editorRoot.orientation = LinearLayout.VERTICAL
+            binding.etContent.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+            )
+        }
     }
 
     private fun setupAutoSave() {
