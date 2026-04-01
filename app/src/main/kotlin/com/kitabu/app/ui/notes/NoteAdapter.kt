@@ -72,8 +72,10 @@ class NoteAdapter(
                     }
                     cardNote.alpha = if (note.id.toLong() in selectedIds) 1.0f else 0.5f
                     cardNote.strokeWidth = if (note.id.toLong() in selectedIds) 2 else 0
-                    cardNote.strokeColor = android.content.res.ColorStateList.valueOf(
-                        root.context.resources.getColor(R.color.accent, root.context.theme)
+                    cardNote.setStrokeColor(
+                        android.content.res.ColorStateList.valueOf(
+                            root.context.resources.getColor(R.color.accent, root.context.theme)
+                        )
                     )
                 } else {
                     checkboxSelect.visibility = View.GONE
