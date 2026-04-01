@@ -10,6 +10,7 @@
     <color name="text_hint">#606080</color>
     <color name="divider">#2A2A3A</color>
     <color name="archive_badge">#FFB74D</color>
+    <color name="white_05">#0DFFFFFF</color>
 
     <!-- NOIR -->
     <color name="noir_bg_primary">#111118</color>
@@ -100,4 +101,24 @@
     <color name="aurora_text_secondary">#9A90C0</color>
     <color name="aurora_text_hint">#4A4570</color>
     <color name="aurora_divider">#2A2848</color>
+
+    <!-- UI Enhancement Colors -->
+    <color name="accent_dimmed">#80C8A2FF</color>
+    <color name="accent_20">#33C8A2FF</color>
+    <color name="accent_10">#1AC8A2FF</color>
+    <color name="card_stroke">#15FFFFFF</color>
+    <color name="card_stroke_selected">#80C8A2FF</color>
+    <color name="chip_background">#15FFFFFF</color>
+    <color name="overlay_dim">#CC000000</color>
+    <color name="status_bar_tint">#0D000000</color>
+    <color name="empty_state_icon">#40FFFFFF</color>
+    <color name="snackbar_bg">#E6252535</color>
+    <color name="progress_track">#1AFFFFFF</color>
+    <color name="shadow_light">#0AFFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
+    <color name="white_05">#0DFFFFFF</color>
+    <color name="white_20">#33FFFFFF</color>
+    <color name="white_30">#4DFFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
 </resources>

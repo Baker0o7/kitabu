@@ -19,8 +19,10 @@ import com.kitabu.app.ui.editor.EditorActivity
 import com.kitabu.app.ui.notes.NoteViewModel
 import com.kitabu.app.util.ThemeManager
 import androidx.lifecycle.lifecycleScope
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class TemplatesActivity : AppCompatActivity() {
     companion object { const val EXTRA_PICK_MODE = "extra_pick_mode" }
     private lateinit var binding: ActivityTemplatesBinding

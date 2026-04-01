@@ -6,6 +6,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.kitabu.app.databinding.ActivityAiAssistantBinding
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,13 +23,19 @@ import com.kitabu.app.util.ThemeManager
  * FREE tier (no credit card): 15 requests/min, 1,500 requests/day, 1M tokens/day.
  * Get a key at https://aistudio.google.com — takes 30 seconds.
  */
+@AndroidEntryPoint
 class AiAssistantActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_NOTE_CONTENT = "extra_note_content"
-        private const val MODEL       = "gemini-2.0-flash"
-        private const val ENDPOINT    = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
+        private const val BASE_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/"
     }
+
+    private val currentModel: String
+        get() = SecurePrefsHelper.getAIModel(this)
+
+    private val endpoint: String
+        get() = "$BASE_ENDPOINT$currentModel:generateContent"
 
     private lateinit var binding: ActivityAiAssistantBinding
     private val client = OkHttpClient()
@@ -44,7 +51,7 @@ class AiAssistantActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "AI Assistant - Gemini Flash"
+        supportActionBar?.title = "AI Assistant - $currentModel"
 
         noteContent = intent.getStringExtra(EXTRA_NOTE_CONTENT).orEmpty()
 
@@ -85,7 +92,7 @@ class AiAssistantActivity : AppCompatActivity() {
         history.add("user" to prompt)
         val requestBody = buildGeminiBody()
         val request = Request.Builder()
-            .url("$ENDPOINT?key=$apiKey")
+            .url("$endpoint?key=$apiKey")
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
 

@@ -7,6 +7,8 @@
         android:icon="@drawable/ic_lock"    app:showAsAction="always"/>
     <item android:id="@+id/action_ai"      android:title="AI Assistant"
         android:icon="@drawable/ic_ai"      app:showAsAction="always"/>
+    <item android:id="@+id/action_focus_mode" android:title="Focus Mode"
+        android:icon="@drawable/ic_focus"   app:showAsAction="ifRoom"/>
     <item android:id="@+id/action_history" android:title="History"
         android:icon="@drawable/ic_history" app:showAsAction="never"/>
     <item android:id="@+id/action_save"    android:title="Save"
@@ -14,5 +16,6 @@
     <item android:id="@+id/action_favorite" android:title="Favorite" android:icon="@drawable/ic_star_outline" app:showAsAction="ifRoom"/>
     <item android:id="@+id/action_reminder" android:title="Reminder" android:icon="@drawable/ic_calendar" app:showAsAction="ifRoom"/>
     <item android:id="@+id/action_share" android:title="Share" android:icon="@drawable/ic_share" app:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_print" android:title="Print" android:icon="@drawable/ic_print" app:showAsAction="never"/>
     <item android:id="@+id/action_export" android:title="Export note" app:showAsAction="never"/>
 </menu>

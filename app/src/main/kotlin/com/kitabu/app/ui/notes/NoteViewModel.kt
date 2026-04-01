@@ -4,11 +4,14 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.kitabu.app.data.*
 import com.kitabu.app.util.SortOrder
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class NoteViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class NoteViewModel @Inject constructor(application: Application) : AndroidViewModel(application) {
 
     private val db   = KitabuDatabase.getDatabase(application)
     val repo = NoteRepository(db, db.noteDao(), db.tagDao(), db.noteVersionDao())

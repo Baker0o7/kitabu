@@ -199,6 +199,12 @@
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
+    <style name="KitabuSubtitle" parent="TextAppearance.Widget.AppCompat.Toolbar.Subtitle">
+        <item name="android:textColor">@color/text_hint</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
     <style name="KitabuDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="colorSurface">@color/noir_bg_elevated</item>
         <item name="colorOnSurface">@color/noir_text_primary</item>

@@ -1,37 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg_primary">
-    <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar"
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/bg_surface"/>
+        android:background="@color/bg_surface"
+        app:titleTextColor="@color/text_primary"
+        app:navigationIconTint="@color/text_primary"/>
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <com.kitabu.app.ui.graph.GraphView android:id="@+id/graphView"
+        <com.kitabu.app.ui.graph.GraphView
+            android:id="@+id/graphView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
-        <TextView
+        <LinearLayout
             android:id="@+id/tvGraphEmpty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="No notes with wikilinks yet.\nUse [[note title]] to link notes."
-            android:textColor="@color/text_hint"
-            android:textSize="14sp"
+            android:orientation="vertical"
             android:gravity="center"
-            android:visibility="gone"/>
-        <TextView
-            android:id="@+id/tvGraphInfo"
+            android:padding="40dp"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔗"
+                android:textSize="48sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="No wikilinks yet"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:fontFamily="sans-serif-medium"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Use [[note title]] to link notes together"
+                android:textColor="@color/text_hint"
+                android:textSize="14sp"
+                android:gravity="center"/>
+        </LinearLayout>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/graphInfoCard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|start"
             android:layout_margin="16dp"
-            android:textColor="@color/text_hint"
-            android:textSize="12sp"
-            android:visibility="gone"/>
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/bg_elevated"
+            app:strokeWidth="0.5dp"
+            app:strokeColor="@color/white_05"
+            android:visibility="gone">
+            <TextView
+                android:id="@+id/tvGraphInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:textColor="@color/text_hint"
+                android:textSize="12sp"/>
+        </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
 </LinearLayout>

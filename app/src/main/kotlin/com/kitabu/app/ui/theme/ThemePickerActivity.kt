@@ -14,7 +14,9 @@ import com.kitabu.app.databinding.ActivityThemePickerBinding
 import com.kitabu.app.databinding.ItemThemeBinding
 import com.kitabu.app.util.KitabuTheme
 import com.kitabu.app.util.ThemeManager
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ThemePickerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityThemePickerBinding

@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -37,6 +38,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.Job
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -54,6 +56,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.apply(this)
         super.onCreate(savedInstanceState)
+
+        // Check if onboarding is completed
+        if (!OnboardingActivity.isOnboardingCompleted(this)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
@@ -122,6 +132,15 @@ class MainActivity : AppCompatActivity() {
             layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
             adapter        = this@MainActivity.adapter
             setHasFixedSize(false)
+            itemAnimator = object : androidx.recyclerview.widget.DefaultItemAnimator() {
+                init {
+                    supportsChangeAnimations = false
+                    addDuration = 250L
+                    moveDuration = 250L
+                    changeDuration = 0L
+                    removeDuration = 150L
+                }
+            }
         }
         ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
@@ -306,11 +325,35 @@ class MainActivity : AppCompatActivity() {
 
     // ── Export / Import ──────────────────────────────────────────────────
 
-    private fun exportAllNotes() {
+    private fun showExportDialog() {
+        val options = arrayOf("Export as JSON (full backup)", "Export as Markdown (.zip)")
+        MaterialAlertDialogBuilder(this, R.style.KitabuDialog)
+            .setTitle("Export notes")
+            .setItems(options) { _, i ->
+                when (i) {
+                    0 -> exportAllNotesJson()
+                    1 -> exportAllNotesMarkdownZip()
+                }
+            }
+            .show()
+    }
+
+    private fun exportAllNotesJson() {
         lifecycleScope.launch {
             try {
-                val uri = ExportImportHelper.exportAllAsJson(this@MainActivity)
+                ExportImportHelper.exportAllAsJson(this@MainActivity)
                 Snackbar.make(binding.root, "Exported to Downloads", Snackbar.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Snackbar.make(binding.root, "Export failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun exportAllNotesMarkdownZip() {
+        lifecycleScope.launch {
+            try {
+                ExportImportHelper.exportAsMarkdownZip(this@MainActivity)
+                Snackbar.make(binding.root, "Markdown ZIP exported to Downloads", Snackbar.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Export failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
@@ -360,7 +403,7 @@ class MainActivity : AppCompatActivity() {
         R.id.sort_title    -> { vm.setSortOrder(SortOrder.TITLE_ASC); true }
         R.id.sort_title_z  -> { vm.setSortOrder(SortOrder.TITLE_DESC); true }
         R.id.sort_words    -> { vm.setSortOrder(SortOrder.WORD_COUNT); true }
-        R.id.action_export_all -> { exportAllNotes(); true }
+        R.id.action_export_all -> { showExportDialog(); true }
         R.id.action_import -> { importNotes(); true }
         else               -> super.onOptionsItemSelected(item)
     }

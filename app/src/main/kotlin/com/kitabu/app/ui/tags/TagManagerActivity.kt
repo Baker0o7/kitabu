@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import com.kitabu.app.R
 import com.kitabu.app.data.Tag
 import com.kitabu.app.databinding.ActivityTagManagerBinding
@@ -16,6 +17,7 @@ import com.kitabu.app.ui.notes.NoteViewModel
 import kotlinx.coroutines.launch
 import com.kitabu.app.util.ThemeManager
 
+@AndroidEntryPoint
 class TagManagerActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTagManagerBinding
     private val vm: NoteViewModel by viewModels()

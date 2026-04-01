@@ -8,4 +8,18 @@
     <dimen name="body_text_size">16sp</dimen>
     <dimen name="label_text_size">13sp</dimen>
     <dimen name="chip_size">32dp</dimen>
+    <dimen name="toolbar_btn_padding">10dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_content_padding">14dp</dimen>
+    <dimen name="note_card_elevation">2dp</dimen>
+    <dimen name="editor_toolbar_height">48dp</dimen>
+    <dimen name="color_dot_size">32dp</dimen>
+    <dimen name="color_dot_margin">6dp</dimen>
+    <dimen name="chat_bubble_radius">16dp</dimen>
+    <dimen name="drawer_header_height">180dp</dimen>
+    <dimen name="drawer_width">300dp</dimen>
+    <dimen name="setting_section_margin_top">20dp</dimen>
+    <dimen name="setting_section_padding">16dp</dimen>
+    <dimen name="section_title_size">14sp</dimen>
+    <dimen name="section_title_color">@color/text_hint</dimen>
 </resources>

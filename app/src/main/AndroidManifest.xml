@@ -63,6 +63,13 @@
             android:exported="false"
             android:parentActivityName=".ui.notes.MainActivity"/>
 
+        <activity android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"/>
+
+        <activity android:name=".ui.stats.StatsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.notes.MainActivity"/>
+
         <!-- Reminder Receiver -->
         <receiver android:name=".ui.reminder.ReminderReceiver" android:exported="false"/>
 

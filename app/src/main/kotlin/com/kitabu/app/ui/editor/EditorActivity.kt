@@ -23,6 +23,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import dagger.hilt.android.AndroidEntryPoint
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -40,6 +41,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 
+@AndroidEntryPoint
 class EditorActivity : AppCompatActivity() {
 
     companion object {

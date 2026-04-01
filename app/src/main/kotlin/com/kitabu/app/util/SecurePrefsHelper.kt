@@ -20,7 +20,7 @@ object SecurePrefsHelper {
     }
 
     fun getAIModel(context: Context): String {
-        return CryptoHelper.getEncryptedPrefs(context).getString(KEY_AI_MODEL, "gpt-3.5-turbo") ?: "gpt-3.5-turbo"
+        return CryptoHelper.getEncryptedPrefs(context).getString(KEY_AI_MODEL, "gemini-2.0-flash") ?: "gemini-2.0-flash"
     }
 
     fun setAIModel(context: Context, model: String) {

@@ -11,7 +11,9 @@ import com.kitabu.app.ui.editor.EditorActivity
 import com.kitabu.app.ui.notes.NoteViewModel
 import com.kitabu.app.util.MarkdownHelper
 import com.kitabu.app.util.ThemeManager
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class GraphActivity : AppCompatActivity() {
     private lateinit var binding: ActivityGraphBinding
     private val vm: NoteViewModel by viewModels()
@@ -29,12 +31,12 @@ class GraphActivity : AppCompatActivity() {
             if (notes.isEmpty()) {
                 binding.tvGraphEmpty.visibility = View.VISIBLE
                 binding.graphView.visibility = View.GONE
-                binding.tvGraphInfo.visibility = View.GONE
+                binding.graphInfoCard.visibility = View.GONE
                 return@observe
             }
             binding.tvGraphEmpty.visibility = View.GONE
             binding.graphView.visibility = View.VISIBLE
-            binding.tvGraphInfo.visibility = View.VISIBLE
+            binding.graphInfoCard.visibility = View.VISIBLE
 
             val nodeList = notes.map { nwt ->
                 GraphView.Node(nwt.note.id, nwt.note.title.ifBlank { "Untitled" }, nwt.note.color)

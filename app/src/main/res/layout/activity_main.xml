@@ -4,7 +4,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
 
     <!-- Main content -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -16,15 +17,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/bg_primary"
-            app:elevation="0dp">
-            <androidx.appcompat.widget.Toolbar
+            android:backgroundTint="@color/bg_primary"
+            app:elevation="0dp"
+            app:liftOnScroll="true">
+
+            <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                app:title="kitabu"
-                app:titleTextAppearance="@style/KitabuTitle"/>
+                app:title="Kitabu"
+                app:titleTextAppearance="@style/KitabuTitle"
+                app:subtitleTextAppearance="@style/KitabuSubtitle"/>
+
         </com.google.android.material.appbar.AppBarLayout>
 
+        <!-- Empty state -->
         <LinearLayout
             android:id="@+id/layoutEmpty"
             android:layout_width="match_parent"
@@ -32,39 +39,62 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:orientation="vertical"
+            android:padding="40dp"
             android:visibility="gone">
-            <TextView
-                android:id="@+id/emptyIcon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📝"
-                android:textSize="64sp"/>
+
+            <!-- Decorative circles background -->
+            <FrameLayout
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center">
+
+                <View
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center"
+                    android:alpha="0.15"
+                    android:background="@drawable/bg_color_chip"/>
+
+                <TextView
+                    android:id="@+id/emptyIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="📝"
+                    android:textSize="56sp"/>
+
+            </FrameLayout>
+
             <TextView
                 android:id="@+id/emptyTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-medium"
                 android:text="No notes yet"
-                android:textColor="@color/text_secondary"
-                android:textSize="18sp"
-                android:fontFamily="sans-serif-medium"/>
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"/>
+
             <TextView
                 android:id="@+id/emptySubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
                 android:text="Tap + to start writing"
                 android:textColor="@color/text_hint"
                 android:textSize="14sp"/>
+
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingHorizontal="8dp"
+            android:paddingHorizontal="10dp"
             android:paddingTop="8dp"
-            android:paddingBottom="80dp"
+            android:paddingBottom="88dp"
             android:clipToPadding="false"
             app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
@@ -73,23 +103,31 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="20dp"
+            android:layout_margin="24dp"
             android:src="@drawable/ic_add"
             app:backgroundTint="@color/accent"
-            app:tint="@color/bg_primary"/>
+            app:elevation="6dp"
+            app:fabCustomSize="60dp"
+            app:tint="@color/bg_primary"
+            app:borderWidth="0dp"/>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- Navigation drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navView"
-        android:layout_width="280dp"
+        android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/bg_surface"
+        android:fitsSystemWindows="false"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/menu_drawer"
         app:itemTextColor="@color/text_primary"
-        app:itemIconTint="@color/accent"/>
+        app:itemIconTint="@color/accent"
+        app:itemBackground="@android:color/transparent"
+        app:insetForeground="@android:color/transparent"
+        app:dividerInsetStart="24dp"
+        app:dividerInsetEnd="24dp"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -16,7 +16,9 @@ import com.kitabu.app.ui.notes.NoteViewModel
 import com.kitabu.app.util.toNoteDate
 import kotlinx.coroutines.launch
 import com.kitabu.app.util.ThemeManager
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class VersionHistoryActivity : AppCompatActivity() {
     companion object { const val EXTRA_NOTE_ID = "extra_note_id" }
     private lateinit var binding: ActivityVersionHistoryBinding
