@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Semantic aliases (default = Noir) -->
+    <color name="bg_primary">#111118</color>
+    <color name="bg_surface">#1E1E2E</color>
+    <color name="bg_elevated">#252535</color>
+    <color name="accent">#C8A2FF</color>
+    <color name="text_primary">#F0F0F8</color>
+    <color name="text_secondary">#A0A0C0</color>
+    <color name="text_hint">#606080</color>
+    <color name="divider">#2A2A3A</color>
+    <color name="archive_badge">#FFB74D</color>
+
+    <!-- NOIR -->
+    <color name="noir_bg_primary">#111118</color>
+    <color name="noir_bg_surface">#1E1E2E</color>
+    <color name="noir_bg_elevated">#252535</color>
+    <color name="noir_accent">#C8A2FF</color>
+    <color name="noir_text_primary">#F0F0F8</color>
+    <color name="noir_text_secondary">#A0A0C0</color>
+    <color name="noir_text_hint">#606080</color>
+    <color name="noir_divider">#2A2A3A</color>
+
+    <!-- MIDNIGHT -->
+    <color name="midnight_bg_primary">#000000</color>
+    <color name="midnight_bg_surface">#0D0D0D</color>
+    <color name="midnight_bg_elevated">#161616</color>
+    <color name="midnight_accent">#4FC3F7</color>
+    <color name="midnight_text_primary">#E8F4FD</color>
+    <color name="midnight_text_secondary">#8BBFD4</color>
+    <color name="midnight_text_hint">#445566</color>
+    <color name="midnight_divider">#1A1A1A</color>
+
+    <!-- FOREST -->
+    <color name="forest_bg_primary">#080F08</color>
+    <color name="forest_bg_surface">#0F1F0F</color>
+    <color name="forest_bg_elevated">#162416</color>
+    <color name="forest_accent">#69F0AE</color>
+    <color name="forest_text_primary">#E8F5E9</color>
+    <color name="forest_text_secondary">#88BB99</color>
+    <color name="forest_text_hint">#3A5540</color>
+    <color name="forest_divider">#1A2C1A</color>
+
+    <!-- CRIMSON -->
+    <color name="crimson_bg_primary">#0F0505</color>
+    <color name="crimson_bg_surface">#1A0808</color>
+    <color name="crimson_bg_elevated">#250E0E</color>
+    <color name="crimson_accent">#FF6B6B</color>
+    <color name="crimson_text_primary">#FDEAEA</color>
+    <color name="crimson_text_secondary">#C08080</color>
+    <color name="crimson_text_hint">#5A3030</color>
+    <color name="crimson_divider">#2A1010</color>
+
+    <!-- DUSK -->
+    <color name="dusk_bg_primary">#100A04</color>
+    <color name="dusk_bg_surface">#1C1208</color>
+    <color name="dusk_bg_elevated">#26190A</color>
+    <color name="dusk_accent">#FFB74D</color>
+    <color name="dusk_text_primary">#FFF3E0</color>
+    <color name="dusk_text_secondary">#C09060</color>
+    <color name="dusk_text_hint">#5A3D10</color>
+    <color name="dusk_divider">#2A1E08</color>
+
+    <!-- NORD -->
+    <color name="nord_bg_primary">#2E3440</color>
+    <color name="nord_bg_surface">#3B4252</color>
+    <color name="nord_bg_elevated">#434C5E</color>
+    <color name="nord_accent">#88C0D0</color>
+    <color name="nord_text_primary">#ECEFF4</color>
+    <color name="nord_text_secondary">#9AAABB</color>
+    <color name="nord_text_hint">#5A6475</color>
+    <color name="nord_divider">#4C566A</color>
+
+    <!-- ROSE -->
+    <color name="rose_bg_primary">#120009</color>
+    <color name="rose_bg_surface">#1C0D14</color>
+    <color name="rose_bg_elevated">#28111C</color>
+    <color name="rose_accent">#F48FB1</color>
+    <color name="rose_text_primary">#FCE4EC</color>
+    <color name="rose_text_secondary">#B07090</color>
+    <color name="rose_text_hint">#5A2A40</color>
+    <color name="rose_divider">#2A0E1C</color>
+
+    <!-- SLATE -->
+    <color name="slate_bg_primary">#0D1317</color>
+    <color name="slate_bg_surface">#151C20</color>
+    <color name="slate_bg_elevated">#1E272C</color>
+    <color name="slate_accent">#80DEEA</color>
+    <color name="slate_text_primary">#E0F2F4</color>
+    <color name="slate_text_secondary">#80A8B0</color>
+    <color name="slate_text_hint">#3A5560</color>
+    <color name="slate_divider">#1C2830</color>
+
+    <!-- AURORA -->
+    <color name="aurora_bg_primary">#0A0A14</color>
+    <color name="aurora_bg_surface">#141428</color>
+    <color name="aurora_bg_elevated">#1E1E3C</color>
+    <color name="aurora_accent">#B388FF</color>
+    <color name="aurora_text_primary">#F0ECFF</color>
+    <color name="aurora_text_secondary">#9A90C0</color>
+    <color name="aurora_text_hint">#4A4570</color>
+    <color name="aurora_divider">#2A2848</color>
+</resources>
