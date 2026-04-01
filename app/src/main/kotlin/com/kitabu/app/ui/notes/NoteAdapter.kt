@@ -2,6 +2,7 @@ package com.kitabu.app.ui.notes
 
 import android.view.*
 import androidx.recyclerview.widget.DiffUtil
+import com.kitabu.app.R
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.kitabu.app.data.NoteColor
