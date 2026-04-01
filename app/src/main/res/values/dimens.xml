@@ -21,5 +21,4 @@
     <dimen name="setting_section_margin_top">20dp</dimen>
     <dimen name="setting_section_padding">16dp</dimen>
     <dimen name="section_title_size">14sp</dimen>
-    <dimen name="section_title_color">@color/text_hint</dimen>
 </resources>
