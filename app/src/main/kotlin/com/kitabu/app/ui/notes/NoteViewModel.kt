@@ -4,17 +4,14 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.kitabu.app.data.*
 import com.kitabu.app.util.SortOrder
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@HiltViewModel
-class NoteViewModel @Inject constructor(application: Application) : AndroidViewModel(application) {
+class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db   = KitabuDatabase.getDatabase(application)
-    val repo = NoteRepository(db, db.noteDao(), db.tagDao(), db.noteVersionDao())
+    val repo = NoteRepository(db.noteDao(), db.tagDao(), db.noteVersionDao())
     val tagRepo      = TagRepository(db.tagDao())
     val templateRepo = TemplateRepository(db.templateDao())
 
@@ -27,15 +24,10 @@ class NoteViewModel @Inject constructor(application: Application) : AndroidViewM
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notes: LiveData<List<NoteWithTags>> = combine(
-        _showFavoritesOnly,
-        combine(
-            _searchQuery.debounce(300), _sortOrder, _filterTagId,
-            _showDailyOnly, _showArchivedOnly
-        ) { q, sort, tagId, dailyOnly, archivedOnly ->
-            FilterState(q, sort, tagId, dailyOnly, archivedOnly)
-        }
-    ) { favoritesOnly, state ->
-        state.copy(favoritesOnly = favoritesOnly)
+        combine(_searchQuery.debounce(300), _sortOrder, _filterTagId) { q, sort, tagId -> Triple(q, sort, tagId) },
+        combine(_showDailyOnly, _showArchivedOnly, _showFavoritesOnly) { daily, archived, fav -> Triple(daily, archived, fav) }
+    ) { (q, sort, tagId), (dailyOnly, archivedOnly, favoritesOnly) ->
+        FilterState(q, sort, tagId, dailyOnly, archivedOnly, favoritesOnly)
     }
         .flatMapLatest { state ->
             val base: Flow<List<NoteWithTags>> = when {
