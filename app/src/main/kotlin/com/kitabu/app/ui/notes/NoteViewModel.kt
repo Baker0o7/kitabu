@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db   = KitabuDatabase.getDatabase(application)
-    val repo = NoteRepository(db.noteDao(), db.tagDao(), db.noteVersionDao())
+    val repo = NoteRepository(db, db.noteDao(), db.tagDao(), db.noteVersionDao())
     val tagRepo      = TagRepository(db.tagDao())
     val templateRepo = TemplateRepository(db.templateDao())
 
