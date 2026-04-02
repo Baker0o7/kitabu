@@ -9,8 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.appcompat.widget.SearchView
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
@@ -26,6 +26,7 @@ import com.kitabu.app.ui.editor.EditorActivity
 import com.kitabu.app.ui.graph.GraphActivity
 import com.kitabu.app.ui.settings.SettingsActivity
 import com.kitabu.app.ui.theme.ThemePickerActivity
+import com.kitabu.app.ui.onboarding.OnboardingActivity
 import com.kitabu.app.ui.tags.TagManagerActivity
 import com.kitabu.app.ui.templates.TemplatesActivity
 import com.kitabu.app.util.BiometricHelper
@@ -33,9 +34,12 @@ import com.kitabu.app.util.SortOrder
 import kotlinx.coroutines.launch
 import com.kitabu.app.util.ThemeManager
 import com.kitabu.app.util.CryptoHelper
+import com.kitabu.app.util.ExportImportHelper
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import kotlinx.coroutines.Job
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -44,14 +48,23 @@ class MainActivity : AppCompatActivity() {
     private var showingArchived = false
     private var showingTrashed = false
     private var showingFavorites = false
+    private var trashCollectJob: Job? = null
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleImport(it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         ThemeManager.apply(this)
+        super.onCreate(savedInstanceState)
+
+        // Check if onboarding is completed
+        if (!OnboardingActivity.isOnboardingCompleted(this)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
@@ -120,6 +133,15 @@ class MainActivity : AppCompatActivity() {
             layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
             adapter        = this@MainActivity.adapter
             setHasFixedSize(false)
+            itemAnimator = object : androidx.recyclerview.widget.DefaultItemAnimator() {
+                init {
+                    supportsChangeAnimations = false
+                    addDuration = 250L
+                    moveDuration = 250L
+                    changeDuration = 0L
+                    removeDuration = 150L
+                }
+            }
         }
         ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
@@ -136,20 +158,12 @@ class MainActivity : AppCompatActivity() {
                     showingArchived -> {
                         vm.toggleArchive(nwt.note)
                         Snackbar.make(binding.root, "Restored to notes", Snackbar.LENGTH_LONG)
-                            .setAction("Undo") {
-                                lifecycleScope.launch {
-                                    vm.repo.archive(nwt.note)
-                                }
-                            }.show()
+                            .setAction("Undo") { vm.toggleArchive(nwt.note) }.show()
                     }
                     else -> {
                         vm.trash(nwt.note)
                         Snackbar.make(binding.root, "Moved to trash", Snackbar.LENGTH_LONG)
-                            .setAction("Undo") {
-                                lifecycleScope.launch {
-                                    vm.repo.restoreFromTrash(nwt.note)
-                                }
-                            }.show()
+                            .setAction("Undo") { lifecycleScope.launch { vm.trash(nwt.note) } }.show()
                     }
                 }
             }
@@ -164,6 +178,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeNotes() {
         vm.notes.observe(this) { list ->
+            if (showingTrashed) return@observe  // Skip when viewing trash
             adapter.submitList(list)
             binding.layoutEmpty.visibility  = if (list.isEmpty()) View.VISIBLE else View.GONE
             binding.recyclerView.visibility = if (list.isEmpty()) View.GONE   else View.VISIBLE
@@ -179,14 +194,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadTrashedNotes() {
-        vm.repo.trashedNotes.asLiveData().observe(this) { list ->
-            adapter.submitList(list)
-            binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            binding.recyclerView.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
-            supportActionBar?.subtitle = "${list.size} trashed note${if (list.size != 1) "s" else ""}"
-            binding.emptyIcon.text = ""
-            binding.emptyTitle.text = "Trash is empty"
-            binding.emptySubtitle.text = "Deleted notes appear here for 30 days"
+        trashCollectJob?.cancel()
+        trashCollectJob = lifecycleScope.launch {
+            vm.repo.trashedNotes.collect { list ->
+                adapter.submitList(list)
+                binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+                binding.recyclerView.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+                supportActionBar?.subtitle = "${list.size} trashed note${if (list.size != 1) "s" else ""}"
+                binding.emptyIcon.text = ""
+                binding.emptyTitle.text = "Trash is empty"
+                binding.emptySubtitle.text = "Deleted notes appear here for 30 days"
+            }
         }
     }
 
@@ -271,23 +289,18 @@ class MainActivity : AppCompatActivity() {
         if (showingTrashed) opts.add("Restore")
         opts.add("Delete")
         opts.add("Share")
-        val restoreIdx = opts.indexOf("Restore")
-        val deleteIdx = opts.indexOf("Delete")
-        val shareIdx = opts.indexOf("Share")
         MaterialAlertDialogBuilder(this, R.style.KitabuDialog)
             .setItems(opts.toTypedArray()) { _, i ->
                 when {
-                    restoreIdx != -1 && i == restoreIdx -> {
-                        lifecycleScope.launch { vm.repo.restoreFromTrash(note) }
+                    showingTrashed && i == opts.size - 3 -> { /* restore */
+                        lifecycleScope.launch { vm.trash(note) }
                     }
                     i == 0 -> vm.togglePin(note)
                     i == 1 -> vm.toggleFavorite(note)
                     i == 2 -> vm.toggleLock(note)
-                    i == 3 && !showingTrashed -> {
-                        vm.toggleArchive(note)
-                    }
-                    i == deleteIdx -> confirmDelete(note)
-                    i == shareIdx -> shareNote(nwt)
+                    i == 3 && !showingTrashed -> vm.toggleArchive(note)
+                    i == opts.size - 2 -> confirmDelete(note)
+                    i == opts.size - 1 -> shareNote(nwt)
                 }
             }.show()
     }
@@ -313,16 +326,35 @@ class MainActivity : AppCompatActivity() {
 
     // ── Export / Import ──────────────────────────────────────────────────
 
-    private fun exportAllNotes() {
+    private fun showExportDialog() {
+        val options = arrayOf("Export as JSON (full backup)", "Export as Markdown (.zip)")
+        MaterialAlertDialogBuilder(this, R.style.KitabuDialog)
+            .setTitle("Export notes")
+            .setItems(options) { _, i ->
+                when (i) {
+                    0 -> exportAllNotesJson()
+                    1 -> exportAllNotesMarkdownZip()
+                }
+            }
+            .show()
+    }
+
+    private fun exportAllNotesJson() {
         lifecycleScope.launch {
             try {
-                val json = vm.repo.exportAllAsJson()
-                val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
-                    android.os.Environment.DIRECTORY_DOWNLOADS
-                )
-                val file = java.io.File(downloadsDir, "kitabu_backup_${System.currentTimeMillis()}.json")
-                java.io.FileOutputStream(file).use { it.write(json.toByteArray()) }
-                Snackbar.make(binding.root, "Exported: ${file.name}", Snackbar.LENGTH_LONG).show()
+                ExportImportHelper.exportAllAsJson(this@MainActivity)
+                Snackbar.make(binding.root, "Exported to Downloads", Snackbar.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Snackbar.make(binding.root, "Export failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun exportAllNotesMarkdownZip() {
+        lifecycleScope.launch {
+            try {
+                ExportImportHelper.exportAsMarkdownZip(this@MainActivity)
+                Snackbar.make(binding.root, "Markdown ZIP exported to Downloads", Snackbar.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Export failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
@@ -336,62 +368,17 @@ class MainActivity : AppCompatActivity() {
     private fun handleImport(uri: Uri) {
         lifecycleScope.launch {
             try {
-                val content = contentResolver.openInputStream(uri)?.use { stream ->
-                    BufferedReader(InputStreamReader(stream)).readText()
-                } ?: return@launch
-                val json = org.json.JSONObject(content)
-                val notesArr = json.optJSONArray("notes") ?: org.json.JSONArray()
-                val tagsArr = json.optJSONArray("tags") ?: org.json.JSONArray()
-                val noteTagsArr = json.optJSONArray("noteTags") ?: org.json.JSONArray()
-
-                // Import tags first (build oldId -> newId map)
-                val tagIdMap = mutableMapOf<Int, Int>()
-                for (i in 0 until tagsArr.length()) {
-                    val t = tagsArr.getJSONObject(i)
-                    val oldId = t.getInt("id")
-                    val name = t.getString("name")
-                    val newTag = vm.getOrCreateTag(name)
-                    tagIdMap[oldId] = newTag.id
+                val fileName = uri.lastPathSegment ?: "file"
+                val result = if (fileName.endsWith(".zip")) {
+                    ExportImportHelper.importFromMarkdownZip(this@MainActivity, uri)
+                } else {
+                    ExportImportHelper.importFromJson(this@MainActivity, uri)
                 }
-
-                // Import notes
-                val noteIdMap = mutableMapOf<Int, Int>()
-                var imported = 0
-                for (i in 0 until notesArr.length()) {
-                    val n = notesArr.getJSONObject(i)
-                    val oldId = n.getInt("id")
-                    val note = Note(
-                        title = n.optString("title", ""),
-                        content = n.optString("content", ""),
-                        color = n.optInt("color", 0),
-                        isPinned = n.optBoolean("isPinned", false),
-                        isLocked = n.optBoolean("isLocked", false),
-                        isArchived = n.optBoolean("isArchived", false),
-                        isFavorite = n.optBoolean("isFavorite", false),
-                        isDaily = n.optBoolean("isDaily", false),
-                        dailyDate = n.optString("dailyDate", null),
-                        reminderTime = if (n.isNull("reminderTime")) null else n.optLong("reminderTime"),
-                        createdAt = n.optLong("createdAt", System.currentTimeMillis()),
-                        updatedAt = n.optLong("updatedAt", System.currentTimeMillis())
-                    )
-                    val newId = vm.repo.insert(note)
-                    noteIdMap[oldId] = newId.toInt()
-                    imported++
+                if (result.success) {
+                    Snackbar.make(binding.root, result.summary, Snackbar.LENGTH_LONG).show()
+                } else {
+                    Snackbar.make(binding.root, result.summary, Snackbar.LENGTH_LONG).show()
                 }
-
-                // Import note-tag associations
-                for (i in 0 until noteTagsArr.length()) {
-                    val nt = noteTagsArr.getJSONObject(i)
-                    val oldNoteId = nt.getInt("noteId")
-                    val oldTagId = nt.getInt("tagId")
-                    val newNoteId = noteIdMap[oldNoteId]
-                    val newTagId = tagIdMap[oldTagId]
-                    if (newNoteId != null && newTagId != null) {
-                        vm.setTagsForNote(newNoteId, listOf(newTagId))
-                    }
-                }
-
-                Snackbar.make(binding.root, "Imported $imported notes", Snackbar.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Import failed: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
@@ -417,7 +404,7 @@ class MainActivity : AppCompatActivity() {
         R.id.sort_title    -> { vm.setSortOrder(SortOrder.TITLE_ASC); true }
         R.id.sort_title_z  -> { vm.setSortOrder(SortOrder.TITLE_DESC); true }
         R.id.sort_words    -> { vm.setSortOrder(SortOrder.WORD_COUNT); true }
-        R.id.action_export_all -> { exportAllNotes(); true }
+        R.id.action_export_all -> { showExportDialog(); true }
         R.id.action_import -> { importNotes(); true }
         else               -> super.onOptionsItemSelected(item)
     }
