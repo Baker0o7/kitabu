@@ -24,13 +24,13 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notes: LiveData<List<NoteWithTags>> = combine(
-        _searchQuery.debounce(300), _sortOrder, _filterTagId, _showDailyOnly, _showArchivedOnly
-    ) { q, sort, tagId, dailyOnly, archivedOnly ->
-        FilterState(q, sort, tagId, dailyOnly, archivedOnly)
+        _searchQuery.debounce(300), _sortOrder, _filterTagId, _showDailyOnly, _showArchivedOnly, _showFavoritesOnly
+    ) { q, sort, tagId, dailyOnly, archivedOnly, favoritesOnly ->
+        FilterState(q, sort, tagId, dailyOnly, archivedOnly, favoritesOnly)
     }
         .flatMapLatest { state ->
             val base: Flow<List<NoteWithTags>> = when {
-                _showFavoritesOnly.value -> repo.favoriteNotes
+                state.favoritesOnly  -> repo.favoriteNotes
                 state.archivedOnly   -> repo.archivedNotes
                 state.dailyOnly      -> repo.dailyNotes
                 state.tagId != null  -> repo.getNotesByTag(state.tagId)
@@ -47,7 +47,8 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         val sort: SortOrder,
         val tagId: Int?,
         val dailyOnly: Boolean,
-        val archivedOnly: Boolean
+        val archivedOnly: Boolean,
+        val favoritesOnly: Boolean = false
     )
 
     private fun sorted(list: List<NoteWithTags>, sort: SortOrder): List<NoteWithTags> {

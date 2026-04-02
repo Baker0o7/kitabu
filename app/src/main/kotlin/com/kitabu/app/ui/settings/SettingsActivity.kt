@@ -52,7 +52,13 @@ class SettingsActivity : AppCompatActivity() {
 
         try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
-            binding.tvVersion.text = "Kitabu v${pInfo.versionName} (${pInfo.versionCode})"
+            val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode
+            }
+            binding.tvVersion.text = "Kitabu v${pInfo.versionName} ($versionCode)"
         } catch (_: Exception) {
             binding.tvVersion.text = "Kitabu v3.0.0"
         }

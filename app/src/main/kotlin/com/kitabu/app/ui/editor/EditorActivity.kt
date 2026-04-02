@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.GridLayout
 import android.widget.TextView as AndroidTextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -86,6 +87,7 @@ class EditorActivity : AppCompatActivity() {
         setupColorPicker()
         setupWordCount()
         setupAutoSave()
+        setupBackPress()
 
         val noteId     = intent.getIntExtra(EXTRA_NOTE_ID, -1)
         val templateId = intent.getIntExtra(EXTRA_TEMPLATE_ID, -1)
@@ -757,6 +759,13 @@ class EditorActivity : AppCompatActivity() {
         else                  -> super.onOptionsItemSelected(item)
     }
 
-    override fun onBackPressed() { performSave() }
     override fun onPause()       { super.onPause(); performSave(silent = true) }
+
+    private fun setupBackPress() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                performSave()
+            }
+        })
+    }
 }
