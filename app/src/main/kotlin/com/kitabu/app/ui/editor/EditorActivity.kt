@@ -466,8 +466,16 @@ class EditorActivity : AppCompatActivity() {
     private fun togglePreview() {
         isPreviewMode = !isPreviewMode
         if (isPreviewMode) {
-            // Full preview mode — hide editor, show rendered content
+            // Full preview mode — disable live preview, hide editor, show rendered content
+            isLivePreview = false
+            livePreviewJob?.cancel()
             updateLivePreview()
+        } else {
+            // Exiting preview mode — re-enable live preview if table detected
+            val content = binding.etContent.text.toString()
+            if (content.contains("| --- |")) {
+                enableLivePreview()
+            }
         }
         updatePreviewVisibility()
     }
