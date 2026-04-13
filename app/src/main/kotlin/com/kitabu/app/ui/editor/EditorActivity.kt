@@ -574,7 +574,97 @@ class EditorActivity : AppCompatActivity() {
         val content = binding.etContent.text.toString()
         val rendered = MarkdownHelper.renderWikiLinks(content)
         markwon.setMarkdown(binding.tvPreview, rendered)
+        setupTableClickHandlers()
     }
+
+    /** Add click handlers to table cells for direct editing */
+    private fun setupTableClickHandlers() {
+        binding.tvPreview.post {
+            addClickHandlersToTables(binding.tvPreview)
+        }
+    }
+
+    private fun addClickHandlersToTables(view: View) {
+        if (view is ViewGroup) {
+            if (view is LinearLayout && view.orientation == LinearLayout.HORIZONTAL) {
+                val parent = view.parent
+                if (parent is LinearLayout && parent.orientation == LinearLayout.VERTICAL) {
+                    for (i in 0 until view.childCount) {
+                        val cell = view.getChildAt(i)
+                        if (cell is TextView) {
+                            cell.isClickable = true
+                            cell.setOnClickListener { 
+                                onTableCellClick(view, i) 
+                            }
+                            if (cell.background == null) {
+                                cell.setBackgroundResource(android.R.attr.selectableItemBackground)
+                            }
+                        }
+                    }
+                }
+            }
+            for (i in 0 until view.childCount) {
+                addClickHandlersToTables(view.getChildAt(i))
+            }
+        }
+    }
+
+    private fun onTableCellClick(row: View, columnIndex: Int) {
+        val tableRow = row as? LinearLayout ?: return
+        val table = tableRow.parent as? LinearLayout ?: return
+        val rowIndex = table.indexOfChild(row)
+        isPreviewMode = false
+        isLivePreview = true
+        updatePreviewVisibility()
+        binding.etContent.post {
+            focusTableCell(rowIndex, columnIndex)
+        }
+    }
+
+    private fun focusTableCell(rowIndex: Int, columnIndex: Int) {
+        val content = binding.etContent.text.toString()
+        val lines = content.lines()
+        var currentRow = -1
+        var targetLineIndex = -1
+        var lineStartPos = 0
+        
+        for ((i, line) in lines.withIndex()) {
+            if (line.trim().startsWith("|") && !line.contains("---")) {
+                currentRow++
+                if (currentRow == rowIndex) {
+                    targetLineIndex = i
+                    break
+                }
+            }
+            lineStartPos += line.length + 1
+        }
+        
+        if (targetLineIndex < 0) return
+        
+        val line = lines[targetLineIndex]
+        if (columnIndex >= line.split("|").size - 1) return
+        
+        var position = lineStartPos
+        var currentCol = 0
+        
+        for ((i, char) in line.withIndex()) {
+            if (char == '|') {
+                if (currentCol == columnIndex) {
+                    position += i + 1
+                    val cellContent = line.substring(i + 1).takeWhile { it == ' ' || it != '|' }
+                    position += (cellContent.length - cellContent.trimStart().length)
+                    break
+                }
+                currentCol++
+            }
+        }
+        
+        if (position in 0 until binding.etContent.length()) {
+            binding.etContent.setSelection(position)
+            binding.etContent.requestFocus()
+        }
+    }
+
 
     private fun updatePreviewVisibility() {
         val showPreview = isPreviewMode || isLivePreview
