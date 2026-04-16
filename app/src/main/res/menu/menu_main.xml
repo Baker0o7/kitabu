@@ -16,7 +16,7 @@
         </menu>
     </item>
     <item android:id="@+id/action_view" android:title="View"
-        android:icon="@drawable/ic_view_list" app:showAsAction="ifRoom">
+        android:icon="@drawable/ic_toolbar_list" app:showAsAction="ifRoom">
         <menu>
             <item android:id="@+id/view_compact" android:title="Compact list" android:checkable="true"/>
             <item android:id="@+id/view_grids"   android:title="Grid view" android:checkable="true"/>
@@ -26,7 +26,7 @@
         </menu>
     </item>
     <item android:id="@+id/action_folders" android:title="Manage folders"
-        android:icon="@drawable/ic_folder" app:showAsAction="never"/>
+        android:icon="@drawable/ic_tag" app:showAsAction="never"/>
     <item android:id="@+id/action_export_all" android:title="Export all notes" app:showAsAction="never"/>
     <item android:id="@+id/action_import" android:title="Import notes" app:showAsAction="never"/>
 </menu>
