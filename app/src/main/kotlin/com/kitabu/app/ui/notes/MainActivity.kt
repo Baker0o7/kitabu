@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.view.MenuItem
 import com.google.android.material.snackbar.Snackbar
 import com.kitabu.app.R
 import com.kitabu.app.data.Note
@@ -27,6 +28,9 @@ import com.kitabu.app.ui.graph.GraphActivity
 import com.kitabu.app.ui.settings.SettingsActivity
 import com.kitabu.app.ui.theme.ThemePickerActivity
 import com.kitabu.app.ui.onboarding.OnboardingActivity
+private var isCompactView = false
+    private var isGridView = false
+    private var showingFolders = false
 import com.kitabu.app.ui.tags.TagManagerActivity
 import com.kitabu.app.ui.templates.TemplatesActivity
 import com.kitabu.app.util.BiometricHelper
@@ -174,14 +178,31 @@ class MainActivity : AppCompatActivity() {
         binding.fab.setOnClickListener { showNewNoteOptions() }
     }
 
+    private fun updateRecyclerViewLayout() {
+        when {
+            isGridView -> binding.recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+            isCompactView -> binding.recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@MainActivity)
+            else -> binding.recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+        }
+        adapter.notifyDataSetChanged()
+    }
     // ── Observe ───────────────────────────────────────────────────────────────
 
     private fun observeNotes() {
+    private fun observeNotes() {
         vm.notes.observe(this) { list ->
-            if (showingTrashed) return@observe  // Skip when viewing trash
+            if (showingTrashed) return@observe  # Skip when viewing trash
             adapter.submitList(list)
             binding.layoutEmpty.visibility  = if (list.isEmpty()) View.VISIBLE else View.GONE
             binding.recyclerView.visibility = if (list.isEmpty()) View.GONE   else View.VISIBLE
+            
+            # Set layout manager based on view mode
+            when {
+                isGridView -> binding.recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+                isCompactView -> binding.recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@MainActivity)
+                else -> binding.recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+            }
+            
             val label = when {
                 showingTrashed -> "trashed note"
                 showingArchived -> "archived note"
@@ -191,6 +212,7 @@ class MainActivity : AppCompatActivity() {
             supportActionBar?.subtitle = "${list.size} $label${if (list.size != 1) "s" else ""}"
             updateEmptyState()
         }
+    }
     }
 
     private fun loadTrashedNotes() {
@@ -399,13 +421,3 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.sort_updated  -> { vm.setSortOrder(SortOrder.UPDATED_DESC); true }
-        R.id.sort_created  -> { vm.setSortOrder(SortOrder.CREATED_DESC); true }
-        R.id.sort_title    -> { vm.setSortOrder(SortOrder.TITLE_ASC); true }
-        R.id.sort_title_z  -> { vm.setSortOrder(SortOrder.TITLE_DESC); true }
-        R.id.sort_words    -> { vm.setSortOrder(SortOrder.WORD_COUNT); true }
-        R.id.action_export_all -> { showExportDialog(); true }
-        R.id.action_import -> { importNotes(); true }
-        else               -> super.onOptionsItemSelected(item)
-    }
-}

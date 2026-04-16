@@ -230,7 +230,7 @@ class EditorActivity : AppCompatActivity() {
 
         val toolbar = binding.markdownToolbar
         actions.forEach { (label, action) ->
-            val tv = android.widget.TextView(this).apply {
+            val tv = AndroidTextView(this).apply {
                 text = label
                 textSize = 13f
                 setTextColor(ContextCompat.getColor(context, R.color.text_primary))
@@ -591,7 +591,7 @@ class EditorActivity : AppCompatActivity() {
                 if (parent is LinearLayout && parent.orientation == LinearLayout.VERTICAL) {
                     for (i in 0 until view.childCount) {
                         val cell = view.getChildAt(i)
-                        if (cell is TextView) {
+                        if (cell is AndroidTextView) {
                             cell.isClickable = true
                             cell.setOnClickListener { 
                                 onTableCellClick(view, i) 

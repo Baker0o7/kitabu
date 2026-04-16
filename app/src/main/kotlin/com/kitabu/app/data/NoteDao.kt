@@ -54,6 +54,14 @@ interface NoteDao {
     fun getArchivedNotesWithTags(): Flow<List<NoteWithTags>>
 
     @Transaction
+    @Query("SELECT * FROM notes WHERE folderId IS NULL AND isArchived = 0 AND isTrashed = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    fun getRootNotesWithTags(): Flow<List<NoteWithTags>>
+
+    @Transaction
+    @Query("SELECT * FROM notes WHERE folderId = :folderId AND isArchived = 0 AND isTrashed = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    fun getNotesInFolderWithTags(folderId: Int?): Flow<List<NoteWithTags>>
+
+    @Transaction
     @Query("SELECT * FROM notes WHERE id = :id")
     suspend fun getNoteWithTagsById(id: Int): NoteWithTags?
 
@@ -95,6 +103,12 @@ interface NoteDao {
 
     @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 1")
     suspend fun getArchivedCount(): Int
+
+    @Query("SELECT COUNT(*) FROM notes WHERE folderId IS NULL AND isArchived = 0 AND isTrashed = 0")
+    suspend fun getRootNoteCount(): Int
+
+    @Query("SELECT COUNT(*) FROM notes WHERE folderId = :folderId AND isArchived = 0 AND isTrashed = 0")
+    suspend fun getNoteCountInFolder(folderId: Int?): Int
 
     // --- Note Tags ---
 

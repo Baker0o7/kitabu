@@ -1,15 +1,37 @@
 package com.kitabu.app.data
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "notes")
+@Entity(
+    tableName = "notes",
+    indices = [
+        Index("folderId"),
+        Index("isArchived"),
+        Index("isTrashed"),
+        Index("isFavorite"),
+        Index("isPinned"),
+        Index("reminderTime"),
+        Index("dailyDate")
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = Folder::class,
+            parentColumns = ["id"],
+            childColumns = ["folderId"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ]
+)
 data class Note(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,
     val content: String,
     val color: Int = NoteColor.DEFAULT,
+    val folderId: Int? = null,  // NULL means root/no folder
     val isPinned: Boolean = false,
     val isLocked: Boolean = false,
     val isArchived: Boolean = false,

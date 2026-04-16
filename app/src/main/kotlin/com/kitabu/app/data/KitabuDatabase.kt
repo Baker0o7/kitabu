@@ -6,8 +6,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Note::class, Tag::class, NoteTag::class, NoteVersion::class, Template::class],
-    version = 5,
+    entities = [Note::class, Tag::class, NoteTag::class, NoteVersion::class, Template::class, Folder::class],
+    version = 6,
     exportSchema = false
 )
 abstract class KitabuDatabase : RoomDatabase() {
@@ -16,6 +16,7 @@ abstract class KitabuDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun noteVersionDao(): NoteVersionDao
     abstract fun templateDao(): TemplateDao
+    abstract fun folderDao(): FolderDao
 
     companion object {
         @Volatile private var INSTANCE: KitabuDatabase? = null
@@ -127,10 +128,57 @@ abstract class KitabuDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create folders table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS folders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        parentFolderId INTEGER,
+                        color INTEGER NOT NULL DEFAULT -16711936,
+                        icon TEXT NOT NULL DEFAULT '📁',
+                        isArchived INTEGER NOT NULL DEFAULT 0,
+                        isFavorite INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY (parentFolderId) REFERENCES folders(id) ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_parent ON folders(parentFolderId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_archived ON folders(isArchived)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_favorite ON folders(isFavorite)")
+
+                // Add folderId to notes table
+                db.execSQL("ALTER TABLE notes ADD COLUMN folderId INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_notes_folder ON notes(folderId)")
+                db.execSQL("""
+                    CREATE TRIGGER IF NOT EXISTS fk_notes_folderid_folders
+                    BEFORE UPDATE OF folderId ON notes
+                    WHEN NEW.folderId IS NOT NULL
+                    BEGIN
+                        SELECT RAISE(ABORT, 'foreign key constraint failed')
+                        WHERE (SELECT id FROM folders WHERE id = NEW.folderId) IS NULL;
+                    END;
+                """)
+                db.execSQL("""
+                    CREATE TRIGGER IF NOT EXISTS fk_notes_folderid_folders_del
+                    BEFORE DELETE ON folders
+                    WHEN OLD.id IS NOT NULL
+                    BEGIN
+                        UPDATE notes SET folderId = NULL WHERE folderId = OLD.id;
+                    END;
+                """)
+
+                // Migrate existing notes to root folder (null folderId already default)
+                // No data migration needed as folderId defaults to NULL
+            }
+        }
+
         fun getDatabase(context: Context): KitabuDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, KitabuDatabase::class.java, "kitabu_db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                     .also { INSTANCE = it }
