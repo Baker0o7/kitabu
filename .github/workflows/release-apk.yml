@@ -1,0 +1,55 @@
+name: Release APK
+
+on:
+  push:
+    branches: [ master, main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup Expo CLI
+      run: npm install -g eas-cli
+      
+    - name: Build Android APK (EAS)
+      id: build
+      run: |
+        BUILD_TYPE="${{ github.event.inputs.build_type || 'preview' }}"
+        echo "Building $BUILD_TYPE APK..."
+        eas build --platform android --profile $BUILD_TYPE --non-interactive --json --wait
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Get Build URL
+      if: success()
+      run: |
+        echo "Build completed successfully!"
+        echo "Download your APK from the Expo dashboard:"
+        echo "https://expo.dev/accounts/$(eas whoami)/projects/kitabu/builds"
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
