@@ -171,6 +171,18 @@ export const SettingsScreen: React.FC = () => {
       ],
     },
     {
+      title: 'Developer',
+      items: [
+        {
+          icon: 'cube',
+          label: 'Build Release APK',
+          onPress: () => navigation.navigate('BuildRelease'),
+          loading: false,
+          danger: false,
+        },
+      ],
+    },
+    {
       title: 'About',
       items: [
         {

@@ -7,6 +7,7 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TagsScreen } from '../screens/TagsScreen';
 import { TemplatesScreen } from '../screens/TemplatesScreen';
+import { BuildReleaseScreen } from '../screens/BuildReleaseScreen';
 import useStore from '../store/useStore';
 
 export type RootStackParamList = {
@@ -16,6 +17,7 @@ export type RootStackParamList = {
   Settings: undefined;
   Tags: undefined;
   Templates: undefined;
+  BuildRelease: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -50,6 +52,7 @@ export const Navigation: React.FC = () => {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="Tags" component={TagsScreen} />
             <Stack.Screen name="Templates" component={TemplatesScreen} />
+            <Stack.Screen name="BuildRelease" component={BuildReleaseScreen} />
           </>
         )}
       </Stack.Navigator>
