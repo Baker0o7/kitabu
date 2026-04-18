@@ -1,140 +1,88 @@
-# Kitabu - React Native Notes App
+# Kitabu - Notes App
 
-A beautiful, feature-rich notes app built with React Native and Expo. Kitabu offers a clean, minimalist interface for organizing your thoughts, ideas, and daily notes.
+A beautiful React Native notes app with markdown support, templates, and more.
 
-![Kitabu Screenshot](assets/icon.png)
-
-## Features
-
-- **Markdown Editor** - Rich text editing with live preview
-- **Templates** - 8 built-in templates for quick note creation
-- **Tags & Folders** - Organize notes with tags and nested folders
-- **Dark Theme** - Beautiful dark UI with customizable accent colors
-- **Search** - Full-text search across all notes
-- **Export/Import** - Backup and restore your data
-- **Multiple Views** - Grid, List, and Compact view modes
-- **Favorites & Archive** - Pin important notes, archive old ones
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Clone the repository
 git clone https://github.com/Baker0o7/KITABU.git
 cd KITABU
-
-# Install dependencies
 npm install
-
-# Start the development server
 npx expo start
 ```
 
-## Automatic APK Builds
+## 📱 Automatic APK Builds
 
-This repository includes GitHub Actions workflows for automatic APK building.
+### Setup (One-time)
 
-### Setup Instructions
+1. **Create Expo Account**
+   - Go to [expo.dev/signup](https://expo.dev/signup)
 
-1. **Create an Expo Account**
-   - Go to [expo.dev](https://expo.dev) and create a free account
+2. **Get Access Token**
+   - Visit [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens)
+   - Click "Create" → Copy token
 
-2. **Generate an Expo Token**
-   - Go to [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens)
-   - Click "Create Token"
-   - Copy the token
-
-3. **Add Token to GitHub Secrets**
-   - Go to your GitHub repository
-   - Navigate to **Settings > Secrets and variables > Actions**
+3. **Add to GitHub**
+   - Go to `Settings → Secrets and variables → Actions`
    - Click "New repository secret"
    - Name: `EXPO_TOKEN`
-   - Value: Your Expo token from step 2
-   - Click "Add secret"
+   - Value: Your copied token
 
-### Build Workflows
+### Build Triggers
 
-#### 1. Automatic Build on Push
-Every push to `master` or `main` branch triggers an automatic APK build.
+| Action | Result |
+|--------|--------|
+| Push to `master` | ⚡ Auto builds APK |
+| Push tag `v1.0.0` | 🎯 Creates release |
+| Manual trigger | 🔧 Choose build type |
 
-#### 2. Manual Build
-Go to **Actions > Release APK > Run workflow** to manually trigger a build.
+### Download APK
 
-#### 3. Build Types
-- **Preview** - Debug APK for testing (faster build)
-- **Production** - Signed APK for release
+After build completes (~10 min):
 
-### Downloading Your APK
+1. **Email**: Check your inbox for Expo download link
+2. **Dashboard**: Visit [expo.dev](https://expo.dev) → Projects → Kitabu → Builds
 
-After the build completes:
-
-1. Check the GitHub Actions logs for the build URL
-2. Or go to [expo.dev](https://expo.dev) and navigate to your project builds
-3. Download the APK directly to your device
-
-## Building Locally
-
-### Option 1: EAS Build (Recommended)
+## 📝 Manual Build
 
 ```bash
 # Install EAS CLI
 npm install -g eas-cli
 
-# Login to Expo
+# Login
 eas login
 
-# Build Preview APK
-eas build --platform android --profile preview
-
-# Build Production APK
-eas build --platform android --profile production
+# Build
+npx eas build --platform android --profile preview
 ```
 
-### Option 2: Local Gradle Build
+## 📁 Workflows
 
-```bash
-# Prebuild the Android project
-npx expo prebuild --platform android
+- **EAS Build** (`.github/workflows/eas-build.yml`) - Main build workflow
+- **Build APK** (`.github/workflows/build-apk.yml`) - Detailed build with notifications  
+- **Release** (`.github/workflows/release-apk.yml`) - Tag-based releases
 
-# Build with Gradle
-cd android
-./gradlew assembleRelease
+## 📝 Features
 
-# APK location:
-# android/app/build/outputs/apk/release/app-release.apk
-```
+- 📝 Markdown editor with preview
+- 📄 8 built-in templates
+- 🏷️ Tags & folders
+- 🌙 Dark theme
+- 🔍 Full-text search
+- 💾 Export/Import
+- ⭐ Favorites & Archive
 
-## Project Structure
+## 📞 Tech Stack
 
-```
-KITABU/
-├── src/
-│   ├── components/     # Reusable UI components
-│   ├── screens/        # App screens
-│   ├── navigation/     # Navigation configuration
-│   ├── store/          # State management (Zustand)
-│   ├── lib/            # Utilities and storage
-│   ├── theme/          # Colors and theming
-│   └── types/          # TypeScript types
-├── assets/             # Images and icons
-├── .github/
-│   └── workflows/      # GitHub Actions
-└── package.json
-```
-
-## Technologies
-
-- React Native
-- Expo SDK 52
+- React Native + Expo SDK 52
 - TypeScript
-- Zustand (State Management)
+- Zustand (state)
 - React Navigation
-- React Native Markdown Display
-- AsyncStorage
+- Markdown renderer
 
-## License
+## 📄 License
 
-MIT License - feel free to use this project for personal or commercial purposes.
+MIT
 
 ---
-
 Made with ❤️ by Kitabu

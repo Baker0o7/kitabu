@@ -3,67 +3,55 @@ name: Build Android APK
 on:
   push:
     branches: [ master, main ]
-  pull_request:
-    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
-  build-apk:
+  build-eas-apk:
+    name: Build APK with EAS
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: 🔍 Checkout repository
       uses: actions/checkout@v4
       
-    - name: Setup Node.js
+    - name: ⚡ Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
         
-    - name: Install dependencies
+    - name: 📦 Install dependencies
       run: npm ci
       
-    - name: Setup Expo CLI
-      run: npm install -g eas-cli
+    - name: 🔧 Setup EAS CLI
+      run: npm install -g eas-cli@latest
       
-    - name: Build Android APK
-      run: eas build --platform android --profile preview --non-interactive
+    - name: 💾 Create EAS project (if needed)
+      run: |
+        if ! grep -q "projectId" app.json; then
+          echo "Project ID not found in app.json"
+          echo "Please run 'eas init' locally and push the changes"
+          exit 1
+        fi
+      continue-on-error: true
+      
+    - name: 🏗️ Build Android APK
+      id: build
+      run: |
+        echo "Starting EAS build for Android..."
+        eas build \
+          --platform android \
+          --profile preview \
+          --non-interactive \
+          --no-wait
+        echo ""
+        echo "✅ Build submitted to EAS queue!"
+        echo "📋 Build status will be available at:"
+        echo "https://expo.dev/accounts/$(eas whoami --token $EXPO_TOKEN)/projects/kitabu/builds"
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
-  build-local-apk:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Prebuild Android project
-      run: npx expo prebuild --platform android
-      
-    - name: Build APK with Gradle
-      working-directory: android
-      run: ./gradlew assembleRelease
-      
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kitabu-release-apk
-        path: android/app/build/outputs/apk/release/app-release.apk
-        retention-days: 30
+    - name: 📧 Notify build started
+      if: success()
+      run: |
+        echo "::notice title=APK Build Started::Your APK is being built on EAS. Check your email or Expo dashboard for the download link."

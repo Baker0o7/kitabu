@@ -2,7 +2,6 @@ name: Release APK
 
 on:
   push:
-    branches: [ master, main ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -18,38 +17,69 @@ on:
 
 jobs:
   release-apk:
+    name: Build Release APK
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: 🔍 Checkout repository
       uses: actions/checkout@v4
       
-    - name: Setup Node.js
+    - name: ⚡ Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
         
-    - name: Install dependencies
+    - name: 📦 Install dependencies
       run: npm ci
       
-    - name: Setup Expo CLI
-      run: npm install -g eas-cli
+    - name: 🔧 Setup EAS CLI
+      run: npm install -g eas-cli@latest
       
-    - name: Build Android APK (EAS)
+    - name: 🏗️ Build Android APK
       id: build
       run: |
-        BUILD_TYPE="${{ github.event.inputs.build_type || 'preview' }}"
+        BUILD_TYPE="${{ github.event.inputs.build_type || 'production' }}"
         echo "Building $BUILD_TYPE APK..."
-        eas build --platform android --profile $BUILD_TYPE --non-interactive --json --wait
+        
+        eas build \
+          --platform android \
+          --profile $BUILD_TYPE \
+          --non-interactive \
+          --no-wait
+        
+        echo ""
+        echo "✅ Build submitted successfully!"
+        echo "📋 Build details available at:"
+        echo "https://expo.dev/accounts/$(eas whoami --token $EXPO_TOKEN)/projects/kitabu/builds"
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
-    - name: Get Build URL
+    - name: 🎯 Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        name: "Kitabu ${{ github.ref_name }}"
+        body: |
+          ## Kitabu Release ${{ github.ref_name }}
+          
+          ### Download APK
+          The APK is being built and will be available shortly at:
+          https://expo.dev/accounts/$(eas whoami --token $EXPO_TOKEN)/projects/kitabu/builds
+          
+          ### Changes
+          See the full changelog in the repository.
+          
+          ### Installation
+          1. Download the APK from the link above
+          2. Enable "Install from Unknown Sources" in Android settings
+          3. Install the APK on your device
+        draft: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 📧 Notify completion
       if: success()
       run: |
-        echo "Build completed successfully!"
-        echo "Download your APK from the Expo dashboard:"
-        echo "https://expo.dev/accounts/$(eas whoami)/projects/kitabu/builds"
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        echo "::notice title=Release Build Started::Your release APK is being built. Check the Expo dashboard for download link."

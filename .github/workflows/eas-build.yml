@@ -1,0 +1,38 @@
+name: EAS Build APK
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Checkout
+        uses: actions/checkout@v4
+
+      - name: ⚡ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: 📦 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Install deps
+        run: npm ci
+
+      - name: 🏗️ Build APK
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+        
+      - name: 📋 Build Info
+        run: |
+          echo "::notice::Build submitted! Check https://expo.dev for status."
